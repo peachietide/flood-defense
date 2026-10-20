@@ -4,6 +4,7 @@ import Hud from './ui/Hud';
 import Toolbar from './ui/Toolbar';
 import Overlay from './ui/Overlay';
 import Legend from './ui/Legend';
+import ResultPanel from './ui/ResultPanel';
 import ScenarioBar from './ui/ScenarioBar';
 import { GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
@@ -97,6 +98,8 @@ export default function App() {
         </div>
 
         <Hud stats={stats} />
+
+        <ResultPanel stats={stats} />
 
         <Toolbar
           phase={stats.phase}

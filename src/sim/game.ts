@@ -23,7 +23,23 @@ export const CFG = {
   pumpRate: 0.9,
   /** 超过这个水深算"被淹" */
   floodThreshold: 0.25,
+  /** 曼宁糙率，用于流速估算（洪泛区带植被） */
+  manning: 0.045,
 } as const;
+
+/** 四个过程指标（工程上真正看的量） */
+export interface Metric {
+  /** 最大水深，m */
+  depth: number;
+  /** 最大流速，m/s */
+  speed: number;
+  /** 累计淹没历时，s */
+  duration: number;
+  /** 首次淹没时刻，s；-1 表示未淹没 */
+  arrival: number;
+  /** 是否被淹过 */
+  flooded: boolean;
+}
 
 export interface Stats {
   phase: Phase;
@@ -35,6 +51,12 @@ export interface Stats {
   floodedPct: number;
   won: boolean;
   pumpCount: number;
+  /** 变电站处的指标 */
+  site: Metric;
+  /** 全域极值 */
+  domain: Metric;
+  /** 已模拟时长 */
+  elapsed: number;
 }
 
 export interface PlaceResult {
@@ -61,6 +83,15 @@ export class GameSim {
   won = false;
   pumps: Array<{ x: number; z: number }> = [];
 
+  /** 逐单元的过程指标（工程上真正关心的四个量） */
+  maxDepth = new Float32Array(N * N);
+  maxSpeed = new Float32Array(N * N);
+  floodTime = new Float32Array(N * N);
+  /** 首次淹没的时刻（秒），-1 表示从未淹没 */
+  arrival = new Float32Array(N * N).fill(-1);
+  /** 已模拟的时间（秒） */
+  elapsed = 0;
+
   private delta = new Float32Array(N * N);
 
   constructor(id: ScenarioId = 'canyon') {
@@ -84,6 +115,12 @@ export class GameSim {
     this.wet = new Float32Array(N * N);
     this.delta.fill(0);
 
+    this.maxDepth.fill(0);
+    this.maxSpeed.fill(0);
+    this.floodTime.fill(0);
+    this.arrival.fill(-1);
+    this.elapsed = 0;
+
     this.phase = 'prepare';
     this.budget = s.budget;
     this.hp = 100;
@@ -99,9 +136,12 @@ export class GameSim {
 
   /** 推进一帧。dt 为秒。 */
   step(dt: number): void {
-    if (this.phase === 'running') {
+    const wasRunning = this.phase === 'running';
+
+    if (wasRunning) {
       const s = this.scenario;
       this.timeLeft -= dt;
+      this.elapsed += dt;
 
       addRain(this.depth, this.rainMask, s.rainRate, dt);
 
@@ -141,16 +181,43 @@ export class GameSim {
       }
     }
 
-    // 湿润着色 + 淹没统计（每帧都更新，结算后水面保持）
+    // 湿润着色 + 淹没统计 + 四项过程指标
     let flooded = 0;
-    for (let i = 0; i < N * N; i++) {
-      const d = this.depth[i];
-      if (d > 0.05) {
-        this.wet[i] = Math.min(1, this.wet[i] + dt * 0.6);
-      } else if (this.wet[i] > 0) {
-        this.wet[i] = Math.max(0, this.wet[i] - dt * 0.18);
+    for (let z = 0; z < N; z++) {
+      for (let x = 0; x < N; x++) {
+        const i = z * N + x;
+        const d = this.depth[i];
+
+        if (d > 0.05) {
+          this.wet[i] = Math.min(1, this.wet[i] + dt * 0.6);
+        } else if (this.wet[i] > 0) {
+          this.wet[i] = Math.max(0, this.wet[i] - dt * 0.18);
+        }
+
+        if (d <= CFG.floodThreshold) continue;
+        flooded++;
+        if (!wasRunning) continue;
+
+        if (d > this.maxDepth[i]) this.maxDepth[i] = d;
+        if (this.arrival[i] < 0) this.arrival[i] = this.elapsed;
+        this.floodTime[i] += dt;
+
+        // 流速用曼宁公式估算：v = (1/n)·R^(2/3)·S^(1/2)
+        // R 取水深，S 取与四邻域水面高差的最大值（每格 1 m，即无量纲比降）。
+        // 水面比降做 2% 封顶：局部陡坎（尤其干湿交界）会算出几十 m/s 的假值。
+        const surface = this.height[i] + d;
+        let slope = 0;
+        if (x > 0) slope = Math.max(slope, surface - (this.height[i - 1] + this.depth[i - 1]));
+        if (x < N - 1) slope = Math.max(slope, surface - (this.height[i + 1] + this.depth[i + 1]));
+        if (z > 0) slope = Math.max(slope, surface - (this.height[i - N] + this.depth[i - N]));
+        if (z < N - 1) slope = Math.max(slope, surface - (this.height[i + N] + this.depth[i + N]));
+
+        if (slope > 0) {
+          const s = Math.min(slope, 0.02);
+          const v = Math.min(10, (1 / CFG.manning) * Math.pow(d, 2 / 3) * Math.sqrt(s));
+          if (v > this.maxSpeed[i]) this.maxSpeed[i] = v;
+        }
       }
-      if (d > CFG.floodThreshold) flooded++;
     }
     this.floodedPct = (flooded / (N * N)) * 100;
   }
@@ -183,7 +250,35 @@ export class GameSim {
     return { ok: true };
   }
 
+  /** 单个单元的指标 */
+  private metricAt(i: number): Metric {
+    return {
+      depth: this.maxDepth[i],
+      speed: this.maxSpeed[i],
+      duration: this.floodTime[i],
+      arrival: this.arrival[i],
+      flooded: this.arrival[i] >= 0,
+    };
+  }
+
+  /** 全域极值：最大水深、最大流速、最长淹没历时、最早到达时间 */
+  private domainMetric(): Metric {
+    let depth = 0;
+    let speed = 0;
+    let duration = 0;
+    let arrival = -1;
+    for (let i = 0; i < N * N; i++) {
+      if (this.maxDepth[i] > depth) depth = this.maxDepth[i];
+      if (this.maxSpeed[i] > speed) speed = this.maxSpeed[i];
+      if (this.floodTime[i] > duration) duration = this.floodTime[i];
+      const a = this.arrival[i];
+      if (a >= 0 && (arrival < 0 || a < arrival)) arrival = a;
+    }
+    return { depth, speed, duration, arrival, flooded: arrival >= 0 };
+  }
+
   stats(): Stats {
+    const fi = this.facility.cz * N + this.facility.cx;
     return {
       phase: this.phase,
       scenarioId: this.scenarioId,
@@ -194,6 +289,9 @@ export class GameSim {
       floodedPct: this.floodedPct,
       won: this.won,
       pumpCount: this.pumps.length,
+      site: this.metricAt(fi),
+      domain: this.domainMetric(),
+      elapsed: this.elapsed,
     };
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { MAX_HEIGHT, N } from '../sim/terrain';
+import { N } from '../sim/terrain';
 import { frameCamera } from './framing';
 import type { GameSim, PlaceResult, Stats, Tool } from '../sim/game';
 
@@ -18,6 +18,7 @@ const C_GRASS = [0.3, 0.48, 0.28];
 const C_FOREST = [0.18, 0.33, 0.2];
 const C_ROCK = [0.42, 0.4, 0.38];
 const C_WET = [0.16, 0.22, 0.3];
+const C_SKIRT = [0.23, 0.2, 0.18];
 const W_SHALLOW = [0.5, 0.83, 0.91];
 const W_DEEP = [0.05, 0.28, 0.48];
 
@@ -27,8 +28,13 @@ function mix(a: number[], b: number[], t: number, out: Float32Array, i: number):
   out[i * 3 + 2] = a[2] + (b[2] - a[2]) * t;
 }
 
-function terrainColorAt(h: number, wet: number): number[] {
-  const t = Math.min(1, Math.max(0, h / MAX_HEIGHT));
+/**
+ * 按高程着色。lo/hi 是当前场景的实际高程范围——
+ * 不能用固定值，峡谷的高程是 -17~20，固定基准会把整片压成沙色。
+ */
+function terrainColorAt(h: number, wet: number, lo: number, hi: number): number[] {
+  const span = Math.max(1e-6, hi - lo);
+  const t = Math.min(1, Math.max(0, (h - lo) / span));
   let c: number[];
   if (t < 0.22) {
     const k = t / 0.22;
@@ -151,6 +157,46 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     waterMesh.frustumCulled = false;
     scene.add(waterMesh);
 
+    // ---------- 地形侧壁（裙边） ----------
+    // 地形是一张没有厚度的曲面，从侧面看会透出铺在下方的水面，形成一圈蓝边。
+    // 给四条边各加一道向下的墙，把地形变成有厚度的"地台"，蓝边就没了。
+    const SKIRT_WALLS = 4;
+    const skirtVerts = SKIRT_WALLS * N * 2;
+    const skirtGeo = new THREE.BufferGeometry();
+    const skirtPos = new Float32Array(skirtVerts * 3);
+    const skirtNrm = new Float32Array(skirtVerts * 3);
+    const skirtCol = new Float32Array(skirtVerts * 3);
+    const skirtIdx = new Uint16Array(SKIRT_WALLS * (N - 1) * 6);
+
+    {
+      let p = 0;
+      for (let w = 0; w < SKIRT_WALLS; w++) {
+        const base = w * N * 2;
+        for (let i = 0; i < N - 1; i++) {
+          const a = base + i * 2;
+          const b = a + 1;
+          const c = a + 2;
+          const d = a + 3;
+          skirtIdx[p++] = a; skirtIdx[p++] = b; skirtIdx[p++] = c;
+          skirtIdx[p++] = c; skirtIdx[p++] = b; skirtIdx[p++] = d;
+        }
+      }
+    }
+
+    skirtGeo.setIndex(new THREE.BufferAttribute(skirtIdx, 1));
+    skirtGeo.setAttribute('position', new THREE.BufferAttribute(skirtPos, 3));
+    skirtGeo.setAttribute('normal', new THREE.BufferAttribute(skirtNrm, 3));
+    skirtGeo.setAttribute('color', new THREE.BufferAttribute(skirtCol, 3));
+
+    const skirtPosAttr = skirtGeo.getAttribute('position') as THREE.BufferAttribute;
+    const skirtNrmAttr = skirtGeo.getAttribute('normal') as THREE.BufferAttribute;
+    const skirtColAttr = skirtGeo.getAttribute('color') as THREE.BufferAttribute;
+
+    const skirtMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const skirtMesh = new THREE.Mesh(skirtGeo, skirtMat);
+    skirtMesh.frustumCulled = false;
+    scene.add(skirtMesh);
+
     // ---------- 变电站 ----------
     const facilityGroup = new THREE.Group();
     const body = new THREE.Mesh(
@@ -216,14 +262,20 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     // 地形是起伏曲面，用角点取景会明显偏上，展示不全。
     let framingPoints: THREE.Vector3[] = [];
     let framedFor: string | null = null;
+    // 当前场景的高程范围，配色用它做归一化
+    let hLo = 0;
+    let hHi = 1;
 
     function reframe(): void {
       framingPoints = [];
+      hLo = Infinity;
+      hHi = -Infinity;
       for (let z = 0; z < N; z += 2) {
         for (let x = 0; x < N; x += 2) {
-          framingPoints.push(
-            new THREE.Vector3(x - N / 2 + 0.5, sim.height[z * N + x], z - N / 2 + 0.5),
-          );
+          const hh = sim.height[z * N + x];
+          if (hh < hLo) hLo = hh;
+          if (hh > hHi) hHi = hh;
+          framingPoints.push(new THREE.Vector3(x - N / 2 + 0.5, hh, z - N / 2 + 0.5));
         }
       }
       frameCamera(camera, framingPoints, controls.target, {
@@ -288,7 +340,7 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
         tNrmArr[i3] = NRM[i3];
         tNrmArr[i3 + 1] = NRM[i3 + 1];
         tNrmArr[i3 + 2] = NRM[i3 + 2];
-        const c = terrainColorAt(H[i], WET[i]);
+        const c = terrainColorAt(H[i], WET[i], hLo, hHi);
         tColArr[i3] = c[0];
         tColArr[i3 + 1] = c[1];
         tColArr[i3 + 2] = c[2];
@@ -304,12 +356,73 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
         mix(W_SHALLOW, W_DEEP, Math.min(1, d / 2.4), wColArr, i);
       }
 
+      updateSkirt(H);
+
       tPos.needsUpdate = true;
       tNrm.needsUpdate = true;
       tCol.needsUpdate = true;
       wPos.needsUpdate = true;
       wNrm.needsUpdate = true;
       wCol.needsUpdate = true;
+      skirtPosAttr.needsUpdate = true;
+      skirtColAttr.needsUpdate = true;
+    }
+
+    /**
+     * 四条边各生成一道向下的墙。底面统一落在最低高程之下，
+     * 看起来就是一块有厚度的地台。
+     */
+    function updateSkirt(H: Float32Array): void {
+      const bottom = hLo - 6;
+
+      // 四条边的顶点索引顺序：北(z=0) / 南(z=N-1) / 西(x=0) / 东(x=N-1)
+      for (let w = 0; w < SKIRT_WALLS; w++) {
+        const base = w * N * 2;
+        for (let i = 0; i < N; i++) {
+          let gx: number;
+          let gz: number;
+          let h: number;
+          if (w === 0) {
+            gx = i; gz = 0; h = H[i];
+          } else if (w === 1) {
+            gx = i; gz = N - 1; h = H[(N - 1) * N + i];
+          } else if (w === 2) {
+            gx = 0; gz = i; h = H[i * N];
+          } else {
+            gx = N - 1; gz = i; h = H[i * N + N - 1];
+          }
+
+          const top = base + i * 2;
+          const bot = top + 1;
+
+          skirtPos[top * 3] = gx - N / 2 + 0.5;
+          skirtPos[top * 3 + 1] = h;
+          skirtPos[top * 3 + 2] = gz - N / 2 + 0.5;
+          skirtPos[bot * 3] = gx - N / 2 + 0.5;
+          skirtPos[bot * 3 + 1] = bottom;
+          skirtPos[bot * 3 + 2] = gz - N / 2 + 0.5;
+
+          // 顶部沿用地形色，越往下越暗
+          const c = terrainColorAt(h, 0, hLo, hHi);
+          skirtCol[top * 3] = c[0];
+          skirtCol[top * 3 + 1] = c[1];
+          skirtCol[top * 3 + 2] = c[2];
+          skirtCol[bot * 3] = C_SKIRT[0];
+          skirtCol[bot * 3 + 1] = C_SKIRT[1];
+          skirtCol[bot * 3 + 2] = C_SKIRT[2];
+
+          // 法线朝外（水平）
+          const nx = w === 2 ? -1 : w === 3 ? 1 : 0;
+          const nz = w === 0 ? -1 : w === 1 ? 1 : 0;
+          skirtNrm[top * 3] = nx;
+          skirtNrm[top * 3 + 1] = 0;
+          skirtNrm[top * 3 + 2] = nz;
+          skirtNrm[bot * 3] = nx;
+          skirtNrm[bot * 3 + 1] = 0;
+          skirtNrm[bot * 3 + 2] = nz;
+        }
+      }
+      skirtNrmAttr.needsUpdate = true;
     }
 
     function syncPumps() {
@@ -384,6 +497,8 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       });
       pumpGeo.dispose();
       pumpMat.dispose();
+      skirtGeo.dispose();
+      skirtMat.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);

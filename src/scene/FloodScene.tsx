@@ -459,9 +459,11 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       syncPumps();
 
       const fi = sim.facility.cz * N + sim.facility.cx;
+      // 不能对高程做 Math.max(..., 0)：峡谷场景厂址在 -14 米，
+      // 夹到 0 会让变电站悬在半空，和水面脱离。
       facilityGroup.position.set(
         sim.facility.cx - N / 2 + 0.5,
-        Math.max(sim.height[fi], 0),
+        sim.height[fi],
         sim.facility.cz - N / 2 + 0.5,
       );
 

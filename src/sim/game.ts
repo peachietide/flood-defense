@@ -23,6 +23,8 @@ export const CFG = {
   pumpRate: 0.9,
   /** 超过这个水深算"被淹" */
   floodThreshold: 0.25,
+  /** 水深超过这个值才开始损伤设施（约膝盖深，肉眼能看到进水） */
+  damageDepth: 0.45,
   /** 曼宁糙率，用于流速估算（洪泛区带植被） */
   manning: 0.045,
 } as const;
@@ -166,7 +168,7 @@ export class GameSim {
       stepWater(this.height, this.depth, this.delta, dt * 0.5);
 
       const fi = this.facility.cz * N + this.facility.cx;
-      if (this.depth[fi] > CFG.floodThreshold) {
+      if (this.depth[fi] > CFG.damageDepth) {
         this.hp -= s.damageRate * dt;
       }
 

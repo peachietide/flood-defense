@@ -1,0 +1,318 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1220;
+  color: #e8eef7;
+  font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+}
+
+.scene canvas {
+  display: block;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.panel {
+  position: absolute;
+  pointer-events: auto;
+  background: rgba(14, 22, 36, 0.86);
+  border: 1px solid rgba(120, 160, 220, 0.22);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- 左上说明 ---------- */
+.info {
+  top: 16px;
+  left: 16px;
+  padding: 14px 16px;
+  max-width: 288px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #a8b8cf;
+}
+
+.info b {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #e8eef7;
+}
+
+.info .tag {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-bottom: 8px;
+  border-radius: 5px;
+  background: rgba(120, 160, 220, 0.15);
+  color: #9fc0f0;
+  font-size: 11px;
+}
+
+.info .dim {
+  margin-top: 8px;
+  color: #6b7f9c;
+}
+
+.info .warn {
+  margin-top: 8px;
+  color: #ff9f43;
+  font-size: 11px;
+}
+
+.info .meta {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(120, 160, 220, 0.15);
+  color: #5c6f8a;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 场景切换 ---------- */
+.scenarios {
+  display: flex;
+  gap: 5px;
+  margin: 4px 0 10px;
+}
+
+.chip {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 7px;
+  background: rgba(30, 44, 68, 0.8);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  color: #93a6c0;
+}
+
+.chip:hover:not(:disabled) {
+  background: rgba(48, 72, 110, 0.9);
+  color: #dbe6f5;
+}
+
+.chip.active {
+  background: #2d6cdf;
+  border-color: #4d8cf5;
+  color: #fff;
+}
+
+.chip:disabled {
+  opacity: 0.5;
+}
+
+.info .cust {
+  margin-bottom: 3px;
+  color: #9fc0f0;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.info .desc {
+  margin-bottom: 4px;
+}
+
+.info .chal {
+  margin-bottom: 2px;
+  color: #ffb454;
+  font-size: 11.5px;
+}
+
+/* ---------- 顶部数值 ---------- */
+.topbar {
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  padding: 12px 22px;
+}
+
+.stat {
+  min-width: 76px;
+  text-align: center;
+}
+
+.stat .k {
+  font-size: 11px;
+  color: #7d90ad;
+  letter-spacing: 0.08em;
+}
+
+.stat .v {
+  font-size: 19px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat .v.warn {
+  color: #ffb454;
+}
+
+.stat .v.bad {
+  color: #ff6b6b;
+}
+
+.stat .v.good {
+  color: #4ade80;
+}
+
+.hpbar {
+  width: 96px;
+  height: 6px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hpfill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s linear, background 0.2s linear;
+}
+
+/* ---------- 底部工具栏 ---------- */
+.toolbar {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+}
+
+button {
+  pointer-events: auto;
+  padding: 9px 15px;
+  border: 1px solid rgba(120, 160, 220, 0.25);
+  border-radius: 9px;
+  background: rgba(30, 44, 68, 0.9);
+  color: #dbe6f5;
+  font-family: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+button:hover:not(:disabled) {
+  border-color: rgba(120, 160, 220, 0.5);
+  background: rgba(48, 72, 110, 0.95);
+}
+
+button.on {
+  border-color: #4d8cf5;
+  background: #2d6cdf;
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.cost {
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.sep {
+  width: 1px;
+  margin: 2px 4px;
+  background: rgba(120, 160, 220, 0.2);
+}
+
+/* ---------- 图例 ---------- */
+.legend {
+  right: 16px;
+  bottom: 16px;
+  padding: 12px 14px;
+  font-size: 11.5px;
+}
+
+.lg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  color: #a8b8cf;
+}
+
+.sw {
+  width: 20px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+/* ---------- 提示 ---------- */
+.hint {
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #6b7f9c;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+.hint.alert {
+  color: #ff6b6b;
+}
+
+/* ---------- 结算 ---------- */
+.overlayWrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 10, 18, 0.55);
+  z-index: 20;
+}
+
+.overlay {
+  padding: 34px 52px;
+  border: 1px solid rgba(120, 160, 220, 0.3);
+  border-radius: 16px;
+  background: rgba(10, 16, 28, 0.96);
+  text-align: center;
+}
+
+.overlay h2 {
+  margin: 0 0 10px;
+  font-size: 26px;
+}
+
+.overlay p {
+  margin: 0 0 20px;
+  color: #a8b8cf;
+  font-size: 14px;
+}

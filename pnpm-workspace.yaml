@@ -1,0 +1,12 @@
+packages:
+  - '.'
+
+# pnpm 10+ 把安装配置放在这里（.npmrc 只管 registry 和认证）。
+# Windows 上默认的符号链接布局会让 Vite 解析不到自己的依赖，
+# 用扁平布局最稳。
+nodeLinker: hoisted
+shamefullyHoist: true
+
+# esbuild 需要在安装后运行一次脚本放置原生二进制。
+onlyBuiltDependencies:
+  - esbuild

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "npm run build && node scripts/copy-docs.mjs",
     "preview": "vite preview --port 4173",
     "typecheck": "tsc --noEmit"
   },

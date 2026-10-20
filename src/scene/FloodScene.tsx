@@ -242,7 +242,10 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       const w = container.clientWidth;
       const h = container.clientHeight;
       if (w === 0 || h === 0) return;
-      renderer.setSize(w, h, false);
+      // 第三个参数默认 true：同时更新 canvas 的 CSS 尺寸。
+      // 传 false 会让 canvas 保持"设备像素"尺寸、溢出容器，画面被裁掉一角。
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     }

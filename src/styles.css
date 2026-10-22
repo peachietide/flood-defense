@@ -92,6 +92,26 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+/* 导出试玩记录：低调一点，别抢视线 */
+.telBtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 0;
+  font-size: 11px;
+  color: #9fc0f0;
+  background: rgba(120, 160, 220, 0.1);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  border-radius: 6px;
+}
+
+.telBtn:hover:not(:disabled) {
+  background: rgba(120, 160, 220, 0.2);
+}
+
+.telBtn:disabled {
+  opacity: 0.4;
+}
+
 /* ---------- 场景切换 ---------- */
 .scenarios {
   display: flex;

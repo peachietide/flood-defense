@@ -12,6 +12,14 @@ import { GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
 import type { ScenarioId } from './sim/scenarios';
 import type { PlaceResult, Stats, Tool } from './sim/game';
+import {
+  beginSession,
+  track,
+  trackFirstAction,
+  trackResult,
+  sessionCount,
+  downloadJson,
+} from './telemetry';
 
 export default function App() {
   const [sim] = useState(() => new GameSim('canyon'));
@@ -20,6 +28,8 @@ export default function App() {
   const [tool, setTool] = useState<Tool>('levee');
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | null>(null);
+  const lastPhase = useRef<Stats['phase']>('prepare');
+  const [sessions, setSessions] = useState(() => sessionCount());
 
   const scenario = SCENARIOS[scenarioId];
 
@@ -30,27 +40,50 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    beginSession('canyon', 1);
     return () => {
       if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     };
   }, []);
 
-  const handleStats = useCallback((next: Stats) => setStats(next), []);
+  const handleStats = useCallback((next: Stats) => {
+    setStats(next);
+    // 一局结束时记录一次结果
+    if (next.phase === 'over' && lastPhase.current !== 'over') {
+      trackResult({
+        won: next.won,
+        hp: next.hp,
+        budget: next.budget,
+        elapsed: next.elapsed,
+        floodedPct: next.floodedPct,
+        pumps: next.pumpCount,
+        pumpsFlooded: next.pumpFlooded,
+      });
+      setSessions(sessionCount());
+    }
+    lastPhase.current = next.phase;
+  }, []);
 
   const handlePlace = useCallback(
-    (result: PlaceResult) => {
+    (result: PlaceResult, cell: { x: number; z: number }) => {
       if (!result.ok && result.reason) showToast(result.reason);
+      trackFirstAction('place');
+      track('place', { tool, x: cell.x, z: cell.z, ok: result.ok });
       setStats(sim.stats());
     },
-    [sim, showToast],
+    [sim, showToast, tool],
   );
 
   const handleStart = useCallback(() => {
+    trackFirstAction('start');
+    track('start', { budgetLeft: sim.budget, pumps: sim.pumps.length });
     sim.start();
     setStats(sim.stats());
   }, [sim]);
 
   const handleReset = useCallback(() => {
+    track('restart');
+    lastPhase.current = 'prepare';
     sim.reset();
     setStats(sim.stats());
     setTool('levee');
@@ -60,6 +93,8 @@ export default function App() {
   const handleScenario = useCallback(
     (id: ScenarioId) => {
       if (id === sim.scenarioId) return;
+      track('scenario', { id });
+      lastPhase.current = 'prepare';
       sim.loadScenario(id);
       setScenarioId(id);
       setStats(sim.stats());
@@ -73,6 +108,7 @@ export default function App() {
     (scale: number) => {
       const r = sim.setRainScale(scale);
       if (!r.ok && r.reason) showToast(r.reason);
+      track('preset', { scale });
       setStats(sim.stats());
     },
     [sim, showToast],
@@ -108,6 +144,10 @@ export default function App() {
           <div className="meta">
             预算 {scenario.budget} · 时长 {scenario.duration}s · 网格 {(112 * 112 / 1000).toFixed(1)}k
           </div>
+
+          <button className="telBtn" onClick={downloadJson} disabled={sessions === 0}>
+            导出试玩记录（{sessions}）
+          </button>
         </div>
 
         <Hud stats={stats} />

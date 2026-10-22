@@ -460,7 +460,13 @@ button:disabled {
 .secSvg {
   display: block;
   width: 100%;
-  height: 128px;
+  height: 112px;
+}
+
+.rainSvg {
+  display: block;
+  width: 100%;
+  height: 46px;
 }
 
 .secFoot {

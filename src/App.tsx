@@ -102,7 +102,7 @@ export default function App() {
 
         <ResultPanel stats={stats} />
 
-        <SectionChart profile={stats.profile} />
+        <SectionChart stats={stats} />
 
         <Toolbar
           phase={stats.phase}

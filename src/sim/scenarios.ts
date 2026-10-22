@@ -47,14 +47,60 @@ export interface Scenario {
   /** 这个场景的难点 */
   challenge: string;
   terrain: TerrainConfig;
-  /** 降雨强度 */
+  /** 降雨峰值强度 */
   rainRate: number;
+  /** 雨型：决定雨强随时间的分布 */
+  rainShape: RainShape;
   /** 一局时长（秒） */
   duration: number;
   /** 初始预算 */
   budget: number;
   /** 设施被淹时每秒损失的完好度 */
   damageRate: number;
+}
+
+/** 雨型：真实暴雨不是恒定强度，而是有起势、峰值和消退 */
+export type RainShape = 'flat' | 'peak' | 'front' | 'double';
+
+function gauss(u: number, mu: number, sigma: number): number {
+  const d = u - mu;
+  return Math.exp(-(d * d) / (2 * sigma * sigma));
+}
+
+/** 无量纲雨型（未归一化） */
+function shapeAt(shape: RainShape, u: number): number {
+  switch (shape) {
+    case 'peak':
+      // 单峰，峰在 45% 处
+      return gauss(u, 0.45, 0.18);
+    case 'front':
+      // 前峰型：先猛后缓，尾部还有一次小回升
+      return 0.95 * gauss(u, 0.18, 0.13) + 0.35 * gauss(u, 0.62, 0.14);
+    case 'double':
+      // 双峰型：两场雨间隔落下
+      return 0.85 * gauss(u, 0.28, 0.09) + 0.85 * gauss(u, 0.62, 0.09);
+    case 'flat':
+    default:
+      return 1;
+  }
+}
+
+/**
+ * 生成归一化雨型曲线：采样 101 点，均值归一到 1。
+ * 这样换成任何雨型，总雨量都和恒定降雨相同，平衡不会被改坏。
+ */
+export function buildRainCurve(shape: RainShape, samples = 101): Float32Array {
+  const curve = new Float32Array(samples);
+  let sum = 0;
+  for (let i = 0; i < samples; i++) {
+    const u = i / (samples - 1);
+    const v = shapeAt(shape, u);
+    curve[i] = v;
+    sum += v;
+  }
+  const mean = sum / samples || 1;
+  for (let i = 0; i < samples; i++) curve[i] /= mean;
+  return curve;
 }
 
 export const SCENARIO_ORDER: ScenarioId[] = ['canyon', 'plain', 'urban'];
@@ -81,6 +127,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       catchmentEnd: 0.52,
     },
     rainRate: 0.115,
+    rainShape: 'peak',
     duration: 45,
     budget: 1000,
     damageRate: 12,
@@ -107,6 +154,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       catchmentEnd: 0.60,
     },
     rainRate: 0.068,
+    rainShape: 'front',
     duration: 90,
     budget: 1000,
     damageRate: 7,
@@ -133,6 +181,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       catchmentEnd: 0.70,
     },
     rainRate: 0.098,
+    rainShape: 'double',
     duration: 60,
     budget: 1000,
     damageRate: 10,

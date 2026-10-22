@@ -7,7 +7,7 @@
 
 import { computeNormals, generateTerrain, N } from './terrain';
 import { addRain, stepWater } from './water';
-import { SCENARIOS } from './scenarios';
+import { SCENARIOS, buildRainCurve } from './scenarios';
 import type { Scenario, ScenarioId } from './scenarios';
 
 export type Phase = 'prepare' | 'running' | 'over';
@@ -71,6 +71,12 @@ export interface Stats {
   elapsed: number;
   /** 穿过变电站的横剖面 */
   profile: ProfileSample;
+  /** 归一化雨型曲线（均值 1） */
+  rainCurve: Float32Array;
+  /** 当前雨强倍率（相对峰值） */
+  rainNow: number;
+  /** 进度 0~1 */
+  progress: number;
 }
 
 export interface PlaceResult {
@@ -106,6 +112,11 @@ export class GameSim {
   /** 已模拟的时间（秒） */
   elapsed = 0;
 
+  /** 归一化雨型曲线（均值 1），长度 101 */
+  rainCurve: Float32Array = buildRainCurve('flat');
+  /** 当前雨强倍率，用于 UI 显示 */
+  rainNow = 1;
+
   private delta = new Float32Array(N * N);
 
   constructor(id: ScenarioId = 'canyon') {
@@ -120,6 +131,8 @@ export class GameSim {
 
   reset(): void {
     const s = this.scenario;
+    this.rainCurve = buildRainCurve(s.rainShape);
+    this.rainNow = 1;
     const terrain = generateTerrain(s.terrain);
     this.height = terrain.height;
     this.normals = terrain.normals;
@@ -157,7 +170,17 @@ export class GameSim {
       this.timeLeft -= dt;
       this.elapsed += dt;
 
-      addRain(this.depth, this.rainMask, s.rainRate, dt);
+      // 雨强按雨型曲线随时间变化（曲线均值已归一到 1，总雨量不变）
+      const u = this.elapsed / s.duration;
+      const last = this.rainCurve.length - 1;
+      const pos = Math.max(0, Math.min(last, u * last));
+      const i0 = Math.floor(pos);
+      const i1 = Math.min(last, i0 + 1);
+      const t = pos - i0;
+      const factor = this.rainCurve[i0] + (this.rainCurve[i1] - this.rainCurve[i0]) * t;
+      this.rainNow = factor;
+
+      addRain(this.depth, this.rainMask, s.rainRate * factor, dt);
 
       for (const p of this.pumps) {
         const r = CFG.pumpRadius;
@@ -321,6 +344,9 @@ export class GameSim {
       domain: this.domainMetric(),
       elapsed: this.elapsed,
       profile: this.profileAtFacilityRow(),
+      rainCurve: this.rainCurve,
+      rainNow: this.rainNow,
+      progress: Math.max(0, Math.min(1, this.elapsed / this.scenario.duration)),
     };
   }
 

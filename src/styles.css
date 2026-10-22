@@ -406,6 +406,14 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+.domLine.pumpOff {
+  color: #ff8f84;
+}
+
+.domLine.pumpOff b {
+  color: #ff8f84;
+}
+
 .resFoot {
   margin-top: 8px;
   color: #5c6f8a;

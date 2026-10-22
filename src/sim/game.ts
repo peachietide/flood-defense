@@ -20,7 +20,10 @@ export const CFG = {
   leveeRadius: 4,
   leveeHeight: 3.2,
   pumpRadius: 4,
-  pumpRate: 0.9,
+  /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
+  pumpFlow: 90,
+  /** 泵房进水超过这个深度就停机 */
+  pumpFloodDepth: 1.0,
   /** 超过这个水深算"被淹" */
   floodThreshold: 0.25,
   /** 水深超过这个值才开始损伤设施（约膝盖深，肉眼能看到进水） */
@@ -79,6 +82,8 @@ export interface Stats {
   progress: number;
   /** 降雨重现期倍率 */
   rainScale: number;
+  /** 已被淹停机的泵数 */
+  pumpFlooded: number;
 }
 
 export interface PlaceResult {
@@ -103,7 +108,7 @@ export class GameSim {
   timeLeft = 60;
   floodedPct = 0;
   won = false;
-  pumps: Array<{ x: number; z: number }> = [];
+  pumps: Array<{ x: number; z: number; flooded: boolean }> = [];
 
   /** 逐单元的过程指标（工程上真正关心的四个量） */
   maxDepth = new Float32Array(N * N);
@@ -188,18 +193,40 @@ export class GameSim {
       addRain(this.depth, this.rainMask, s.rainRate * factor * this.rainScale, dt);
 
       for (const p of this.pumps) {
+        // 泵房自己进水就停机——所以水泵必须放在地势较高处
+        const pi = p.z * N + p.x;
+        p.flooded = this.depth[pi] > CFG.pumpFloodDepth;
+        if (p.flooded) continue;
+
         const r = CFG.pumpRadius;
         const z0 = Math.max(0, p.z - r);
         const z1 = Math.min(N - 1, p.z + r);
         const x0 = Math.max(0, p.x - r);
         const x1 = Math.min(N - 1, p.x + r);
+
+        // 先数一下半径内有多少"有水的格子"
+        let area = 0;
+        for (let z = z0; z <= z1; z++) {
+          for (let x = x0; x <= x1; x++) {
+            const dx = x - p.x;
+            const dz = z - p.z;
+            if (dx * dx + dz * dz > r * r) continue;
+            if (this.depth[z * N + x] > 0.01) area++;
+          }
+        }
+        if (area === 0) continue;
+
+        // 固定流量：总抽水量 Q·dt 摊到所有湿格上。
+        // 浸水面积越大，每格水位降得越慢——这就是"抽不赢"。
+        // 再加一个单格降速上限：真实泵受来水补给限制，不可能把一小片水瞬间抽干。
+        const drop = Math.min(1.0 * dt, (CFG.pumpFlow * dt) / area);
         for (let z = z0; z <= z1; z++) {
           for (let x = x0; x <= x1; x++) {
             const dx = x - p.x;
             const dz = z - p.z;
             if (dx * dx + dz * dz > r * r) continue;
             const i = z * N + x;
-            this.depth[i] = Math.max(0, this.depth[i] - CFG.pumpRate * dt);
+            this.depth[i] = Math.max(0, this.depth[i] - drop);
           }
         }
       }
@@ -288,7 +315,7 @@ export class GameSim {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
     if (this.budget < CFG.pumpCost) return { ok: false, reason: '预算不足' };
     this.budget -= CFG.pumpCost;
-    this.pumps.push({ x: cx, z: cz });
+    this.pumps.push({ x: cx, z: cz, flooded: false });
     return { ok: true };
   }
 
@@ -352,6 +379,7 @@ export class GameSim {
       floodedPct: this.floodedPct,
       won: this.won,
       pumpCount: this.pumps.length,
+      pumpFlooded: this.pumps.reduce((n, p) => n + (p.flooded ? 1 : 0), 0),
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,

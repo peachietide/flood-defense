@@ -217,6 +217,8 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     const pumpGroup = new THREE.Group();
     const pumpGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.4, 12);
     const pumpMat = new THREE.MeshStandardMaterial({ color: 0x38d9d9, emissive: 0x0b4a4a, roughness: 0.4 });
+    // 被淹停机的泵换成暗红色，一眼能看出这台不工作了
+    const pumpMatOff = new THREE.MeshStandardMaterial({ color: 0x9c5a52, emissive: 0x3a1512, roughness: 0.75 });
     scene.add(pumpGroup);
     let pumpMeshCount = 0;
 
@@ -441,6 +443,7 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
         const p = sim.pumps[k];
         const m = pumpGroup.children[k] as THREE.Mesh;
         m.position.set(p.x - N / 2 + 0.5, sim.height[p.z * N + p.x] + 0.7, p.z - N / 2 + 0.5);
+        m.material = p.flooded ? pumpMatOff : pumpMat;
       }
     }
 
@@ -499,6 +502,7 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       });
       pumpGeo.dispose();
       pumpMat.dispose();
+      pumpMatOff.dispose();
       skirtGeo.dispose();
       skirtMat.dispose();
       renderer.dispose();

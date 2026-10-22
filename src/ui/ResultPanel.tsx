@@ -47,6 +47,13 @@ export default function ResultPanel({ stats }: { stats: Stats }) {
         最长淹没 <b>{fmtTime(domain.duration)}</b> · 最早到达 <b>{fmtTime(domain.arrival)}</b>
       </div>
 
+      {stats.pumpCount > 0 ? (
+        <div className={`domLine ${stats.pumpFlooded > 0 ? 'pumpOff' : ''}`}>
+          水泵 <b>{stats.pumpCount}</b> 台
+          {stats.pumpFlooded > 0 ? ` · 已停机 ${stats.pumpFlooded} 台` : ''}
+        </div>
+      ) : null}
+
       <div className="resFoot">
         {stats.elapsed > 0 ? `已模拟 ${stats.elapsed.toFixed(0)} s` : '降雨开始后逐帧统计'}
       </div>

@@ -41,6 +41,8 @@ export default function App() {
 
   useEffect(() => {
     beginSession('canyon', 1);
+    // 会话一开始就落盘了，这里同步一下计数，否则按钮会一直是灰的
+    setSessions(sessionCount());
     return () => {
       if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     };

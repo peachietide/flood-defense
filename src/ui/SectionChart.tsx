@@ -1,4 +1,5 @@
 import type { Stats } from '../sim/game';
+import { RAIN_PRESETS } from '../sim/scenarios';
 
 const W = 300;
 const PAD = 8;
@@ -81,11 +82,14 @@ function SectionStrip({ stats }: { stats: Stats }) {
 export default function SectionChart({ stats }: { stats: Stats }) {
   // 雨强倍率一般在 0~1.6 之间，映射成 0~100%
   const pct = Math.round((stats.rainNow / 1.6) * 100);
+  const preset = RAIN_PRESETS.find((p) => Math.abs(p.scale - stats.rainScale) < 1e-6);
   return (
     <div className="panel section">
       <div className="secHead">
         <span>降雨过程线</span>
-        <span className="secY">当前 {Math.max(0, Math.min(100, pct))}%</span>
+        <span className="secY">
+          {preset ? `${preset.label}一遇 · ` : ''}当前 {Math.max(0, Math.min(100, pct))}%
+        </span>
       </div>
       <RainStrip curve={stats.rainCurve} progress={stats.progress} />
 

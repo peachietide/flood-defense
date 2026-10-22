@@ -7,7 +7,7 @@
 
 import { computeNormals, generateTerrain, N } from './terrain';
 import { addRain, stepWater } from './water';
-import { SCENARIOS, buildRainCurve } from './scenarios';
+import { SCENARIOS, buildRainCurve, DEFAULT_RAIN_SCALE } from './scenarios';
 import type { Scenario, ScenarioId } from './scenarios';
 
 export type Phase = 'prepare' | 'running' | 'over';
@@ -77,6 +77,8 @@ export interface Stats {
   rainNow: number;
   /** 进度 0~1 */
   progress: number;
+  /** 降雨重现期倍率 */
+  rainScale: number;
 }
 
 export interface PlaceResult {
@@ -116,6 +118,8 @@ export class GameSim {
   rainCurve: Float32Array = buildRainCurve('flat');
   /** 当前雨强倍率，用于 UI 显示 */
   rainNow = 1;
+  /** 降雨重现期倍率（相对场景基准雨强） */
+  rainScale = DEFAULT_RAIN_SCALE;
 
   private delta = new Float32Array(N * N);
 
@@ -126,6 +130,7 @@ export class GameSim {
   loadScenario(id: ScenarioId): void {
     this.scenarioId = id;
     this.scenario = SCENARIOS[id];
+    this.rainScale = DEFAULT_RAIN_SCALE;
     this.reset();
   }
 
@@ -180,7 +185,7 @@ export class GameSim {
       const factor = this.rainCurve[i0] + (this.rainCurve[i1] - this.rainCurve[i0]) * t;
       this.rainNow = factor;
 
-      addRain(this.depth, this.rainMask, s.rainRate * factor, dt);
+      addRain(this.depth, this.rainMask, s.rainRate * factor * this.rainScale, dt);
 
       for (const p of this.pumps) {
         const r = CFG.pumpRadius;
@@ -287,6 +292,13 @@ export class GameSim {
     return { ok: true };
   }
 
+  /** 设置降雨重现期倍率。只能在布防阶段改，避免中途改雨强造成结果失真。 */
+  setRainScale(scale: number): PlaceResult {
+    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+    this.rainScale = scale;
+    return { ok: true };
+  }
+
   /** 单个单元的指标 */
   private metricAt(i: number): Metric {
     return {
@@ -347,6 +359,7 @@ export class GameSim {
       rainCurve: this.rainCurve,
       rainNow: this.rainNow,
       progress: Math.max(0, Math.min(1, this.elapsed / this.scenario.duration)),
+      rainScale: this.rainScale,
     };
   }
 

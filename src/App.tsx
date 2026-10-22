@@ -7,6 +7,7 @@ import Legend from './ui/Legend';
 import ResultPanel from './ui/ResultPanel';
 import ScenarioBar from './ui/ScenarioBar';
 import SectionChart from './ui/SectionChart';
+import RainPresets from './ui/RainPresets';
 import { GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
 import type { ScenarioId } from './sim/scenarios';
@@ -68,6 +69,15 @@ export default function App() {
     [sim],
   );
 
+  const handleRainScale = useCallback(
+    (scale: number) => {
+      const r = sim.setRainScale(scale);
+      if (!r.ok && r.reason) showToast(r.reason);
+      setStats(sim.stats());
+    },
+    [sim, showToast],
+  );
+
   const hint =
     stats.phase === 'prepare'
       ? tool === 'levee'
@@ -89,6 +99,8 @@ export default function App() {
           <div className="cust">{scenario.customer}</div>
           <div className="desc">{scenario.description}</div>
           <div className="chal">难点：{scenario.challenge}</div>
+
+          <RainPresets scale={stats.rainScale} phase={stats.phase} onSelect={handleRainScale} />
 
           <div className="dim">拖动旋转 · 滚轮缩放 · 点击施工</div>
           <div className="warn">⚠ 物理过程为简化模型，仅用于视觉演示，非工程精度</div>

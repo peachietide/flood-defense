@@ -191,3 +191,28 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
 export function getScenario(id: ScenarioId): Scenario {
   return SCENARIOS[id];
 }
+
+/**
+ * 降雨重现期预设。
+ * 工程上用"多少年一遇"表达雨强，比给一个裸数字更直观。
+ * scale 是相对场景基准雨强的倍率。
+ */
+export interface RainPreset {
+  id: string;
+  /** 按钮文字 */
+  label: string;
+  /** 相对基准雨强的倍率 */
+  scale: number;
+  /** 说明，用于悬停提示 */
+  note: string;
+}
+
+export const RAIN_PRESETS: RainPreset[] = [
+  { id: 'p5', label: '5 年', scale: 0.55, note: '常遇洪水，场地基本安全' },
+  { id: 'p20', label: '20 年', scale: 0.8, note: '一般设计标准附近' },
+  { id: 'p50', label: '50 年', scale: 1.0, note: '场景基准工况' },
+  { id: 'p100', label: '100 年', scale: 1.35, note: '校核工况，接近极端' },
+];
+
+/** 默认预设（50 年一遇，倍率 1.0，与原有平衡一致） */
+export const DEFAULT_RAIN_SCALE = 1.0;

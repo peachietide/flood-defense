@@ -1,4 +1,5 @@
 import type { Stats } from '../sim/game';
+import { RAIN_PRESETS } from '../sim/scenarios';
 import { fmtDepth, fmtSpeed, fmtTime } from './format';
 
 export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () => void }) {
@@ -17,6 +18,10 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
         </p>
 
         <div className="ovGrid">
+          <span>降雨重现期</span>
+          <span>
+            {RAIN_PRESETS.find((p) => Math.abs(p.scale - stats.rainScale) < 1e-6)?.label ?? '—'}一遇
+          </span>
           <span>变电站最大水深</span>
           <span>{fmtDepth(site.depth)} m</span>
           <span>变电站最大流速</span>

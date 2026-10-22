@@ -43,6 +43,16 @@ export interface Metric {
   flooded: boolean;
 }
 
+/** 一条剖面线的数据（沿 x 方向，穿过变电站所在行） */
+export interface ProfileSample {
+  /** 地面高程 */
+  ground: number[];
+  /** 水面高程（无水处等于地面） */
+  surface: number[];
+  /** 变电站在这条剖面上的位置（索引） */
+  facilityIndex: number;
+}
+
 export interface Stats {
   phase: Phase;
   scenarioId: ScenarioId;
@@ -59,6 +69,8 @@ export interface Stats {
   domain: Metric;
   /** 已模拟时长 */
   elapsed: number;
+  /** 穿过变电站的横剖面 */
+  profile: ProfileSample;
 }
 
 export interface PlaceResult {
@@ -279,6 +291,20 @@ export class GameSim {
     return { depth, speed, duration, arrival, flooded: arrival >= 0 };
   }
 
+  /** 穿过变电站所在行的横剖面 */
+  private profileAtFacilityRow(): ProfileSample {
+    const z = this.facility.cz;
+    const ground: number[] = new Array(N);
+    const surface: number[] = new Array(N);
+    for (let x = 0; x < N; x++) {
+      const i = z * N + x;
+      const h = this.height[i];
+      ground[x] = h;
+      surface[x] = h + this.depth[i];
+    }
+    return { ground, surface, facilityIndex: this.facility.cx };
+  }
+
   stats(): Stats {
     const fi = this.facility.cz * N + this.facility.cx;
     return {
@@ -294,6 +320,7 @@ export class GameSim {
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,
+      profile: this.profileAtFacilityRow(),
     };
   }
 

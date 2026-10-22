@@ -6,6 +6,7 @@ import Overlay from './ui/Overlay';
 import Legend from './ui/Legend';
 import ResultPanel from './ui/ResultPanel';
 import ScenarioBar from './ui/ScenarioBar';
+import SectionChart from './ui/SectionChart';
 import { GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
 import type { ScenarioId } from './sim/scenarios';
@@ -100,6 +101,8 @@ export default function App() {
         <Hud stats={stats} />
 
         <ResultPanel stats={stats} />
+
+        <SectionChart profile={stats.profile} />
 
         <Toolbar
           phase={stats.phase}

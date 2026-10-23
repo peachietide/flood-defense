@@ -241,8 +241,12 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       opacity: 0.4,
       side: THREE.DoubleSide,
       depthWrite: false,
+      // 关掉深度测试：光圈是操作指引，不是场景实物。
+      // 开着的话，视角一低，前面的坡就会把光圈挡掉一半（峡谷尤其明显）。
+      depthTest: false,
     });
     const siteRing = new THREE.Mesh(ringGeo, ringMat);
+    siteRing.renderOrder = 20;
     scene.add(siteRing);
 
     /** 双线性采样地形高度，让光带顺着坡面走 */

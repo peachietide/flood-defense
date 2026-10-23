@@ -223,7 +223,10 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     const RING_SEG = 128;
     const RING_INNER = 4.4;
     const RING_OUTER = 5.9;
+    /** 一圈上分布多少段虚线 */
+    const RING_DASHES = 26;
     const ringPos = new Float32Array((RING_SEG + 1) * 2 * 3);
+    const ringUv = new Float32Array((RING_SEG + 1) * 2 * 2);
     const ringIdx: number[] = [];
     for (let k = 0; k < RING_SEG; k++) {
       const a = k * 2;
@@ -232,14 +235,41 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       const d = (k + 1) * 2 + 1;
       ringIdx.push(a, c, b, b, c, d);
     }
+    // uv.u 沿圆周铺 RING_DASHES 遍，配合虚线贴图就成了刻度状的光带
+    for (let k = 0; k <= RING_SEG; k++) {
+      const u = (k / RING_SEG) * RING_DASHES;
+      ringUv[(k * 2) * 2] = u;
+      ringUv[(k * 2) * 2 + 1] = 0;
+      ringUv[(k * 2 + 1) * 2] = u;
+      ringUv[(k * 2 + 1) * 2 + 1] = 1;
+    }
+
+    // 虚线贴图：一段实、一段空，横向循环
+    const dashCanvas = document.createElement('canvas');
+    dashCanvas.width = 64;
+    dashCanvas.height = 4;
+    const dctx = dashCanvas.getContext('2d');
+    if (dctx) {
+      dctx.clearRect(0, 0, 64, 4);
+      dctx.fillStyle = '#ffffff';
+      dctx.fillRect(0, 0, 38, 4);
+    }
+    const dashTex = new THREE.CanvasTexture(dashCanvas);
+    dashTex.wrapS = THREE.RepeatWrapping;
+    dashTex.wrapT = THREE.ClampToEdgeWrapping;
+    dashTex.needsUpdate = true;
+
     const ringGeo = new THREE.BufferGeometry();
     ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+    ringGeo.setAttribute('uv', new THREE.BufferAttribute(ringUv, 2));
     ringGeo.setIndex(ringIdx);
     const ringMat = new THREE.MeshBasicMaterial({
-      // 品红：和土黄地形、蓝绿洪水都不撞色，一眼能看出是界面标记而不是地面上的东西
-      color: 0xff5fd2,
+      // 冷白偏蓝：和暖色地形是不同色相家族，又不像品红那样和绿色打架；
+      // 比洪水的蓝淡得多，不会被误认成水面。
+      color: 0xd8e6ff,
+      map: dashTex,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.9,
       side: THREE.DoubleSide,
       depthWrite: false,
       // 关掉深度测试：光圈是操作指引，不是场景实物。
@@ -556,7 +586,9 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       siteRing.visible = !sim.hasRing;
       if (preparing) updateSiteRing();
       const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
-      ringMat.opacity = (preparing ? 0.24 : 0.07) + (preparing ? 0.3 : 0.05) * pulse;
+      ringMat.opacity = (preparing ? 0.55 : 0.16) + (preparing ? 0.35 : 0.08) * pulse;
+      // 虚线沿圆周缓慢流动：动的东西更像"界面"，静止的容易看成地面的纹理
+      dashTex.offset.x = (dashTex.offset.x + dt * 0.06) % 1;
 
       hudTimer += dt;
       if (hudTimer > 0.1) {
@@ -593,6 +625,7 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       pumpMatOff.dispose();
       ringGeo.dispose();
       ringMat.dispose();
+      dashTex.dispose();
       skirtGeo.dispose();
       skirtMat.dispose();
       renderer.dispose();

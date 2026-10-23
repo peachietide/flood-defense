@@ -294,6 +294,8 @@ button:disabled {
 }
 
 /* ---------- 提示 ---------- */
+/* 浅色卡片：整个场景是深色的，浅色块在对比度上天然跳出来，
+   不需要靠更亮的描边去抢注意力。 */
 .hint {
   position: absolute;
   bottom: 92px;
@@ -301,20 +303,20 @@ button:disabled {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 10px;
-  max-width: 74vw;
+  gap: 12px;
+  max-width: 76vw;
   padding: 12px 28px;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.25;
-  color: #fff4dd;
+  color: #33220a;
   text-align: center;
   white-space: nowrap;
-  background: linear-gradient(180deg, rgba(40, 58, 92, 0.96), rgba(17, 26, 44, 0.97));
-  border: 1px solid rgba(255, 194, 74, 0.55);
+  background: linear-gradient(180deg, #fff6e0, #ffe4b0);
+  border: 1px solid #e5ad3c;
   border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 26px rgba(255, 190, 70, 0.35);
   animation: hintGlow 2.4s ease-in-out infinite;
 }
 
@@ -322,32 +324,32 @@ button:disabled {
 @keyframes hintGlow {
   0%,
   100% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(255, 194, 74, 0.4);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 190, 70, 0.3);
   }
   55% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 12px rgba(255, 194, 74, 0);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 46px rgba(255, 190, 70, 0.62);
   }
 }
 
-/* 图标做成浅色圆徽：整条指引最重要的锚点，得先被眼睛抓住 */
+/* 图标圆徽：用更深的琥珀色反衬浅底，形成"深-浅-深"的层次 */
 .hintIcon {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1;
-  background: rgba(255, 210, 120, 0.28);
-  border: 1px solid rgba(255, 210, 120, 0.65);
-  box-shadow: 0 0 12px rgba(255, 194, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, #ffffff, #ffecc4);
+  border: 1.5px solid #d99a2b;
+  box-shadow: 0 3px 10px rgba(170, 110, 10, 0.35);
 }
 
 .hint.alert .hintIcon {
-  background: rgba(255, 140, 140, 0.3);
-  border-color: rgba(255, 140, 140, 0.7);
-  box-shadow: 0 0 12px rgba(255, 100, 100, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, #ffffff, #ffdede);
+  border-color: #d05c5c;
+  box-shadow: 0 3px 10px rgba(160, 40, 40, 0.35);
 }
 
 .hintText {
@@ -359,31 +361,35 @@ button:disabled {
 
 .hintMain {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* "拖动旋转 · 滚轮缩放" 这类操作说明：比主提示小一号，但必须看得清 */
 .hintSub {
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.06em;
-  color: rgba(255, 244, 221, 0.72);
+  color: rgba(60, 40, 10, 0.72);
 }
 
 .hint.alert {
-  color: #ffe0e0;
-  background: linear-gradient(180deg, rgba(96, 28, 28, 0.96), rgba(48, 14, 14, 0.97));
-  border-color: rgba(255, 120, 120, 0.65);
+  color: #5c1414;
+  background: linear-gradient(180deg, #fff0f0, #ffd2d2);
+  border-color: #d97070;
   animation: hintGlowRed 1.2s ease-in-out infinite;
+}
+
+.hint.alert .hintSub {
+  color: rgba(92, 20, 20, 0.72);
 }
 
 @keyframes hintGlowRed {
   0%,
   100% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(255, 100, 100, 0.45);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 110, 110, 0.35);
   }
   55% {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 10px rgba(255, 100, 100, 0);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 44px rgba(255, 110, 110, 0.65);
   }
 }
 

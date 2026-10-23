@@ -137,7 +137,9 @@ export default function App() {
     stats.phase === 'prepare'
       ? tool === 'levee'
         ? '点击光圈内，把场地垫高到洪水位以上'
-        : '点击光圈内低洼处，布置抽水泵'
+        : tool === 'ring'
+          ? '点击变电站附近，围一圈挡水的堰（堤内积水要靠水泵排）'
+          : '点击光圈内低洼处，布置抽水泵'
       : '';
 
   return (

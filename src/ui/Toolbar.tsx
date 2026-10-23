@@ -20,6 +20,9 @@ export default function Toolbar({ phase, tool, onTool, onStart, onReset }: Props
       <button className={tool === 'levee' ? 'on' : ''} disabled={running} onClick={() => onTool('levee')}>
         ⛰ 加高场地<span className="cost">{CFG.leveeCost} 起</span>
       </button>
+      <button className={tool === 'ring' ? 'on' : ''} disabled={running} onClick={() => onTool('ring')}>
+        🧱 围堰<span className="cost">{CFG.ringCost}</span>
+      </button>
       <button className={tool === 'pump' ? 'on' : ''} disabled={running} onClick={() => onTool('pump')}>
         💧 水泵<span className="cost">{CFG.pumpCost}</span>
       </button>

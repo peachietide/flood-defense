@@ -11,7 +11,7 @@ import { SCENARIOS, buildRainCurve, DEFAULT_RAIN_SCALE } from './scenarios';
 import type { Scenario, ScenarioId } from './scenarios';
 
 export type Phase = 'prepare' | 'running' | 'over';
-export type Tool = 'levee' | 'pump';
+export type Tool = 'levee' | 'pump' | 'ring';
 
 /** 与场景无关的全局规则 */
 export const CFG = {
@@ -26,6 +26,17 @@ export const CFG = {
   pumpFlow: 4,
   /** 泵房进水超过这个深度就停机 */
   pumpFloodDepth: 1.0,
+
+  /** 围堰：绕厂址围一圈挡水的土堰 */
+  ringCost: 200,
+  /** 围堰内半径（格） */
+  ringInner: 5.0,
+  /** 围堰外半径（格）。厚度必须 ≥2.5 格：单格厚的斜向围墙在四邻域里会漏水 */
+  ringOuter: 7.7,
+  /** 围堰高出沿线地面最高点的超高 */
+  ringFreeboard: 2.6,
+  /** 围堰施工点距变电站中心的最大格数 */
+  ringMaxDistance: 12,
   /** 超过这个水深算"被淹" */
   floodThreshold: 0.25,
   /** 水深超过这个值才开始损伤设施（约膝盖深，肉眼能看到进水） */
@@ -86,6 +97,8 @@ export interface Stats {
   rainScale: number;
   /** 已被淹停机的泵数 */
   pumpFlooded: number;
+  /** 是否已围堰 */
+  hasRing: boolean;
 }
 
 export interface PlaceResult {
@@ -122,6 +135,8 @@ export class GameSim {
   arrival = new Float32Array(N * N).fill(-1);
   /** 每个位置被抬高过几次，用来计算加高的边际成本 */
   raiseCount = new Float32Array(N * N);
+  /** 是否已围堰 */
+  hasRing = false;
   /** 已模拟的时间（秒） */
   elapsed = 0;
 
@@ -163,6 +178,7 @@ export class GameSim {
     this.floodTime.fill(0);
     this.arrival.fill(-1);
     this.raiseCount.fill(0);
+    this.hasRing = false;
     this.elapsed = 0;
 
     this.phase = 'prepare';
@@ -332,6 +348,51 @@ export class GameSim {
     return { ok: true, cost };
   }
 
+  /**
+   * 围堰：绕厂址围一圈挡水的土堰。
+   * 它挡住堤外的洪水，但堤内的本地降雨排不出去——所以必须配水泵。
+   */
+  placeRing(cx: number, cz: number): PlaceResult {
+    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+    if (this.hasRing) return { ok: false, reason: '围堰已经建好了' };
+
+    const d = Math.hypot(cx - this.facility.cx, cz - this.facility.cz);
+    if (d > CFG.ringMaxDistance) return { ok: false, reason: '太远了，靠近变电站' };
+    if (this.budget < CFG.ringCost) return { ok: false, reason: `预算不足（需 ${CFG.ringCost}）` };
+
+    this.budget -= CFG.ringCost;
+    this.hasRing = true;
+
+    const fx = this.facility.cx;
+    const fz = this.facility.cz;
+    const span = Math.ceil(CFG.ringOuter) + 2;
+
+    // 堰顶高程按"围堰沿线地面的最高点"再抬一个超高，而不是按厂坪算。
+    // 厂坪往往低于周边地面（facilityDrop），按厂坪算会让堰顶埋进地里，
+    // 围堰反而变成一个存水的坑。
+    let crestY = -Infinity;
+    for (let z = Math.max(0, fz - span); z <= Math.min(N - 1, fz + span); z++) {
+      for (let x = Math.max(0, fx - span); x <= Math.min(N - 1, fx + span); x++) {
+        const dd = Math.hypot(x - fx, z - fz);
+        if (dd < CFG.ringInner || dd > CFG.ringOuter) continue;
+        const h = this.height[z * N + x];
+        if (h > crestY) crestY = h;
+      }
+    }
+    crestY += CFG.ringFreeboard;
+
+    for (let z = Math.max(0, fz - span); z <= Math.min(N - 1, fz + span); z++) {
+      for (let x = Math.max(0, fx - span); x <= Math.min(N - 1, fx + span); x++) {
+        const dd = Math.hypot(x - fx, z - fz);
+        if (dd < CFG.ringInner || dd > CFG.ringOuter) continue;
+        const i = z * N + x;
+        if (this.height[i] < crestY) this.height[i] = crestY;
+      }
+    }
+    computeNormals(this.height, this.normals);
+    return { ok: true, cost: CFG.ringCost };
+  }
+
   placePump(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
     if (this.budget < CFG.pumpCost) return { ok: false, reason: '预算不足' };
@@ -401,6 +462,7 @@ export class GameSim {
       won: this.won,
       pumpCount: this.pumps.length,
       pumpFlooded: this.pumps.reduce((n, p) => n + (p.flooded ? 1 : 0), 0),
+      hasRing: this.hasRing,
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,

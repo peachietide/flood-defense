@@ -325,8 +325,13 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       const cz = Math.round(p.z + N / 2 - 0.5);
       if (cx < 0 || cz < 0 || cx >= N || cz >= N) return;
 
+      const t = toolRef.current;
       const result =
-        toolRef.current === 'levee' ? sim.placeLevee(cx, cz) : sim.placePump(cx, cz);
+        t === 'levee'
+          ? sim.placeLevee(cx, cz)
+          : t === 'ring'
+            ? sim.placeRing(cx, cz)
+            : sim.placePump(cx, cz);
       placeRef.current(result, { x: cx, z: cz });
     }
 
@@ -546,6 +551,8 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
 
       // 场地光圈：贴着地形起伏，缓慢呼吸；布防结束后收敛，不干扰看洪水
       const preparing = sim.phase === 'prepare';
+      // 建了围堰之后，光圈和堰顶会叠在一起，直接收掉
+      siteRing.visible = !sim.hasRing;
       if (preparing) updateSiteRing();
       const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
       ringMat.opacity = (preparing ? 0.24 : 0.07) + (preparing ? 0.3 : 0.05) * pulse;

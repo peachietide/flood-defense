@@ -319,11 +319,52 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     }
 
     // ---------- 水泵标记 ----------
+    // 原来只是一个 r=0.9 的小圆柱，在 112 格宽的场景里几乎看不见。
+    // 现在做成"泵房 + 地面作用范围 + 竖直光柱"三件套，
+    // 让玩家一眼看出：这里有一台泵，它管多大一片地方，它是否还在工作。
     const pumpGroup = new THREE.Group();
-    const pumpGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.4, 12);
+    const pumpBodyGeo = new THREE.CylinderGeometry(1.35, 1.6, 2.6, 16);
+    const pumpCapGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.7, 10);
+    const pumpDiscGeo = new THREE.CircleGeometry(4, 40);
+    const pumpBeamGeo = new THREE.CylinderGeometry(0.1, 0.18, 3.4, 8);
+
     const pumpMat = new THREE.MeshStandardMaterial({ color: 0x38d9d9, emissive: 0x0b4a4a, roughness: 0.4 });
-    // 被淹停机的泵换成暗红色，一眼能看出这台不工作了
+    const pumpCapMat = new THREE.MeshStandardMaterial({ color: 0xbdf6f6, emissive: 0x1a5c5c, roughness: 0.5 });
+    const pumpDiscMat = new THREE.MeshBasicMaterial({
+      color: 0x46e0ff,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+    });
+    const pumpBeamMat = new THREE.MeshBasicMaterial({
+      color: 0x46e0ff,
+      transparent: true,
+      opacity: 0.32,
+      depthWrite: false,
+      depthTest: false,
+    });
+
+    // 被淹停机的泵换一套暗红色，一眼能看出这台不工作了
     const pumpMatOff = new THREE.MeshStandardMaterial({ color: 0x9c5a52, emissive: 0x3a1512, roughness: 0.75 });
+    const pumpCapMatOff = new THREE.MeshStandardMaterial({ color: 0xd8a8a0, emissive: 0x3a1512, roughness: 0.8 });
+    const pumpDiscMatOff = new THREE.MeshBasicMaterial({
+      color: 0xff6b6b,
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+    });
+    const pumpBeamMatOff = new THREE.MeshBasicMaterial({
+      color: 0xff6b6b,
+      transparent: true,
+      opacity: 0.26,
+      depthWrite: false,
+      depthTest: false,
+    });
+
     scene.add(pumpGroup);
     let pumpMeshCount = 0;
 
@@ -537,11 +578,36 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       skirtNrmAttr.needsUpdate = true;
     }
 
+    /** 一台泵 = 泵房 + 顶部小烟囱 + 地面作用光圈 + 竖直光柱 */
+    function makePumpGroup(): THREE.Group {
+      const g = new THREE.Group();
+
+      const body = new THREE.Mesh(pumpBodyGeo, pumpMat);
+      body.position.y = 1.3;
+      g.add(body);
+
+      const cap = new THREE.Mesh(pumpCapGeo, pumpCapMat);
+      cap.position.y = 2.95;
+      g.add(cap);
+
+      const disc = new THREE.Mesh(pumpDiscGeo, pumpDiscMat);
+      disc.rotation.x = -Math.PI / 2;
+      disc.position.y = 0.12;
+      disc.renderOrder = 18;
+      g.add(disc);
+
+      const beam = new THREE.Mesh(pumpBeamGeo, pumpBeamMat);
+      beam.position.y = 4.2;
+      beam.renderOrder = 19;
+      g.add(beam);
+
+      return g;
+    }
+
     function syncPumps() {
       const want = sim.pumps.length;
       while (pumpMeshCount < want) {
-        const m = new THREE.Mesh(pumpGeo, pumpMat);
-        pumpGroup.add(m);
+        pumpGroup.add(makePumpGroup());
         pumpMeshCount++;
       }
       while (pumpMeshCount > want) {
@@ -551,9 +617,13 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       }
       for (let k = 0; k < want; k++) {
         const p = sim.pumps[k];
-        const m = pumpGroup.children[k] as THREE.Mesh;
-        m.position.set(p.x - N / 2 + 0.5, sim.height[p.z * N + p.x] + 0.7, p.z - N / 2 + 0.5);
-        m.material = p.flooded ? pumpMatOff : pumpMat;
+        const g = pumpGroup.children[k] as THREE.Group;
+        const off = p.flooded;
+        g.position.set(p.x - N / 2 + 0.5, sim.height[p.z * N + p.x], p.z - N / 2 + 0.5);
+        (g.children[0] as THREE.Mesh).material = off ? pumpMatOff : pumpMat;
+        (g.children[1] as THREE.Mesh).material = off ? pumpCapMatOff : pumpCapMat;
+        (g.children[2] as THREE.Mesh).material = off ? pumpDiscMatOff : pumpDiscMat;
+        (g.children[3] as THREE.Mesh).material = off ? pumpBeamMatOff : pumpBeamMat;
       }
     }
 
@@ -620,9 +690,18 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       pumpGroup.traverse((o) => {
         if (o instanceof THREE.Mesh) (o.material as THREE.Material).dispose();
       });
-      pumpGeo.dispose();
+      pumpBodyGeo.dispose();
+      pumpCapGeo.dispose();
+      pumpDiscGeo.dispose();
+      pumpBeamGeo.dispose();
       pumpMat.dispose();
       pumpMatOff.dispose();
+      pumpCapMat.dispose();
+      pumpCapMatOff.dispose();
+      pumpDiscMat.dispose();
+      pumpDiscMatOff.dispose();
+      pumpBeamMat.dispose();
+      pumpBeamMatOff.dispose();
       ringGeo.dispose();
       ringMat.dispose();
       dashTex.dispose();

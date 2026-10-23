@@ -216,7 +216,25 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     // ---------- 场地范围光圈 ----------
     // 玩家最常见的失误是在离变电站很远的地方施工（半径只有 4 格，够不着）。
     // 用一圈呼吸的光带把"该在哪儿施工"画出来。
-    const ringGeo = new THREE.RingGeometry(5.4, 6.4, 64);
+    //
+    // 注意：不能用 RingGeometry —— 那是一块平板，放在一个高度上，
+    // 地形一起伏就被埋掉，园区场景（场地四周比厂址高）会完全看不见。
+    // 这里逐点采样地形高度，做一条贴着地面的高地带。
+    const RING_SEG = 128;
+    const RING_INNER = 4.4;
+    const RING_OUTER = 5.9;
+    const ringPos = new Float32Array((RING_SEG + 1) * 2 * 3);
+    const ringIdx: number[] = [];
+    for (let k = 0; k < RING_SEG; k++) {
+      const a = k * 2;
+      const b = k * 2 + 1;
+      const c = (k + 1) * 2;
+      const d = (k + 1) * 2 + 1;
+      ringIdx.push(a, c, b, b, c, d);
+    }
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+    ringGeo.setIndex(ringIdx);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffc24a,
       transparent: true,
@@ -225,8 +243,45 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       depthWrite: false,
     });
     const siteRing = new THREE.Mesh(ringGeo, ringMat);
-    siteRing.rotation.x = -Math.PI / 2;
     scene.add(siteRing);
+
+    /** 双线性采样地形高度，让光带顺着坡面走 */
+    function sampleTerrainHeight(gx: number, gz: number): number {
+      const x0 = Math.floor(gx);
+      const z0 = Math.floor(gz);
+      const tx = gx - x0;
+      const tz = gz - z0;
+      const xa = Math.max(0, Math.min(N - 1, x0));
+      const xb = Math.max(0, Math.min(N - 1, x0 + 1));
+      const za = Math.max(0, Math.min(N - 1, z0));
+      const zb = Math.max(0, Math.min(N - 1, z0 + 1));
+      const h00 = sim.height[za * N + xa];
+      const h10 = sim.height[za * N + xb];
+      const h01 = sim.height[zb * N + xa];
+      const h11 = sim.height[zb * N + xb];
+      return (h00 * (1 - tx) + h10 * tx) * (1 - tz) + (h01 * (1 - tx) + h11 * tx) * tz;
+    }
+
+    function updateSiteRing() {
+      const fx = sim.facility.cx;
+      const fz = sim.facility.cz;
+      for (let k = 0; k <= RING_SEG; k++) {
+        const ang = (k / RING_SEG) * Math.PI * 2;
+        const ca = Math.cos(ang);
+        const sa = Math.sin(ang);
+        for (let j = 0; j < 2; j++) {
+          const r = j === 0 ? RING_INNER : RING_OUTER;
+          const gx = fx + ca * r;
+          const gz = fz + sa * r;
+          const i = (k * 2 + j) * 3;
+          ringPos[i] = gx - N / 2 + 0.5;
+          ringPos[i + 1] = sampleTerrainHeight(gx, gz) + 0.22;
+          ringPos[i + 2] = gz - N / 2 + 0.5;
+        }
+      }
+      ringGeo.attributes.position.needsUpdate = true;
+      ringGeo.computeBoundingSphere();
+    }
 
     // ---------- 水泵标记 ----------
     const pumpGroup = new THREE.Group();
@@ -485,17 +540,11 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
         sim.facility.cz - N / 2 + 0.5,
       );
 
-      // 场地光圈：贴着地面，缓慢呼吸；布防结束后收敛，不干扰看洪水
-      siteRing.position.set(
-        sim.facility.cx - N / 2 + 0.5,
-        sim.height[fi] + 0.25,
-        sim.facility.cz - N / 2 + 0.5,
-      );
-      const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
+      // 场地光圈：贴着地形起伏，缓慢呼吸；布防结束后收敛，不干扰看洪水
       const preparing = sim.phase === 'prepare';
-      ringMat.opacity = (preparing ? 0.22 : 0.06) + (preparing ? 0.3 : 0.05) * pulse;
-      const s = 1 + (preparing ? 0.04 * pulse : 0);
-      siteRing.scale.set(s, s, 1);
+      if (preparing) updateSiteRing();
+      const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
+      ringMat.opacity = (preparing ? 0.24 : 0.07) + (preparing ? 0.3 : 0.05) * pulse;
 
       hudTimer += dt;
       if (hudTimer > 0.1) {

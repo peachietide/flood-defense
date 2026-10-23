@@ -19,8 +19,6 @@ export const CFG = {
   pumpCost: 200,
   leveeRadius: 4,
   leveeHeight: 3.2,
-  /** 加高施工点距变电站中心的最大格数，超出则拒绝（半径只有 4，太远完全没作用） */
-  leveeMaxDistance: 8,
   pumpRadius: 4,
   /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
   pumpFlow: 4,
@@ -321,33 +319,35 @@ export class GameSim {
   placeLevee(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
 
+    const r = CFG.leveeRadius;
     const fx = this.facility.cx;
     const fz = this.facility.cz;
+    const dist = Math.hypot(cx - fx, cz - fz);
 
-    // 离变电站太远时直接拒绝，避免白花预算
-    const dcx = cx - fx;
-    const dcz = cz - fz;
-    if (Math.sqrt(dcx * dcx + dcz * dcz) > CFG.leveeMaxDistance) {
-      return { ok: false, reason: '太远了，靠近变电站施工' };
+    // 允许范围就是加高半径本身：落在半径内，厂址中心一定能被抬到（只是强弱不同）；
+    // 超出半径布置就是纯白花钱，直接拒绝——不能做成"能点但无效"的隐形陷阱。
+    if (dist > r) {
+      return { ok: false, reason: '离变电站太远，抬不到厂址——请点在厂址附近' };
     }
 
-    // 吸附到厂址中心。
-    // 加高半径是 4 格，而 4.0 格和 4.12 格在画面上完全看不出区别，
-    // 结果却是一个守住、一个全灭——这不是难度，是隐藏规则。
-    // 该考察玩家的是"选什么措施、花多少钱"，不是"点得准不准"。
+    // 峡谷地形起伏大、厂址在深坑里很难瞄准，给一点吸附；
+    // 平原/园区地面平坦、目标清晰，保留玩家自己选点的操作感（snapRadius = 0）。
+    const snap = this.scenario.terrain.snapRadius;
+    const snapped = snap > 0 && dist <= snap;
+    const px = snapped ? fx : cx;
+    const pz = snapped ? fz : cz;
 
-    // 成本随已抬次数递增：120 → 240 → 360 …
+    // 成本按"厂址处已抬次数"递增：120 → 240 → 360 …
     // 对应真实工程里土方量随填高非线性增长。
     const level = this.raiseCount[fz * N + fx];
     const cost = Math.round(CFG.leveeCost * (1 + level));
     if (this.budget < cost) return { ok: false, reason: `预算不足（需 ${cost}）` };
 
     this.budget -= cost;
-    const r = CFG.leveeRadius;
-    for (let z = Math.max(0, fz - r); z <= Math.min(N - 1, fz + r); z++) {
-      for (let x = Math.max(0, fx - r); x <= Math.min(N - 1, fx + r); x++) {
-        const dx = x - fx;
-        const dz = z - fz;
+    for (let z = Math.max(0, pz - r); z <= Math.min(N - 1, pz + r); z++) {
+      for (let x = Math.max(0, px - r); x <= Math.min(N - 1, px + r); x++) {
+        const dx = x - px;
+        const dz = z - pz;
         const d = Math.sqrt(dx * dx + dz * dz);
         if (d > r) continue;
         const w = 1 - d / r;

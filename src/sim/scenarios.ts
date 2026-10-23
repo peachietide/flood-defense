@@ -32,6 +32,13 @@ export interface TerrainConfig {
   facilityDrop: number;
   /** 厂址台地半径 */
   facilityRadius: number;
+  /**
+   * 加高时的自动吸附半径（格）。点到距厂址小于该值的点，会自动对齐到厂址中心。
+   * 峡谷地形起伏大、厂址埋在深坑里，很难瞄准，所以给一点吸附；
+   * 平原和园区地面平坦、目标清晰，保留玩家自己选点的操作感。
+   * 设为 0 表示不吸附。
+   */
+  snapRadius: number;
   /** 降雨区结束位置（0~1），之后不再下雨 */
   catchmentEnd: number;
 }
@@ -124,6 +131,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       facilityOffset: 11,
       facilityDrop: -7.5,
       facilityRadius: 5,
+      snapRadius: 3,
       catchmentEnd: 0.52,
     },
     rainRate: 0.115,
@@ -151,6 +159,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       facilityOffset: 12,
       facilityDrop: -1.6,
       facilityRadius: 7,
+      snapRadius: 0,
       catchmentEnd: 0.60,
     },
     rainRate: 0.068,
@@ -178,6 +187,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       facilityOffset: 11,
       facilityDrop: -2.2,
       facilityRadius: 6,
+      snapRadius: 0,
       catchmentEnd: 0.70,
     },
     rainRate: 0.098,

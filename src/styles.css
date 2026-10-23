@@ -329,9 +329,25 @@ button:disabled {
   }
 }
 
+/* 图标做成浅色圆徽：整条指引最重要的锚点，得先被眼睛抓住 */
 .hintIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   font-size: 19px;
   line-height: 1;
+  background: rgba(255, 210, 120, 0.28);
+  border: 1px solid rgba(255, 210, 120, 0.65);
+  box-shadow: 0 0 12px rgba(255, 194, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.hint.alert .hintIcon {
+  background: rgba(255, 140, 140, 0.3);
+  border-color: rgba(255, 140, 140, 0.7);
+  box-shadow: 0 0 12px rgba(255, 100, 100, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .hintText {

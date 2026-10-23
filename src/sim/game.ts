@@ -89,6 +89,8 @@ export interface Stats {
 export interface PlaceResult {
   ok: boolean;
   reason?: string;
+  /** 实际花费（加高的成本随位置递增，不再是固定值） */
+  cost?: number;
 }
 
 export class GameSim {
@@ -116,6 +118,8 @@ export class GameSim {
   floodTime = new Float32Array(N * N);
   /** 首次淹没的时刻（秒），-1 表示从未淹没 */
   arrival = new Float32Array(N * N).fill(-1);
+  /** 每个位置被抬高过几次，用来计算加高的边际成本 */
+  raiseCount = new Float32Array(N * N);
   /** 已模拟的时间（秒） */
   elapsed = 0;
 
@@ -156,6 +160,7 @@ export class GameSim {
     this.maxSpeed.fill(0);
     this.floodTime.fill(0);
     this.arrival.fill(-1);
+    this.raiseCount.fill(0);
     this.elapsed = 0;
 
     this.phase = 'prepare';
@@ -293,9 +298,15 @@ export class GameSim {
 
   placeLevee(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
-    if (this.budget < CFG.leveeCost) return { ok: false, reason: '预算不足' };
 
-    this.budget -= CFG.leveeCost;
+    // 成本随"这个位置已经抬了几次"递增：120 → 240 → 360 …
+    // 对应真实工程里土方量随填高非线性增长。半径内的相邻位置也会继承等级，
+    // 避免"挪一格重新按 120 收费"的漏洞。
+    const level = this.raiseCount[cz * N + cx];
+    const cost = Math.round(CFG.leveeCost * (1 + level));
+    if (this.budget < cost) return { ok: false, reason: `预算不足（需 ${cost}）` };
+
+    this.budget -= cost;
     const r = CFG.leveeRadius;
     for (let z = Math.max(0, cz - r); z <= Math.min(N - 1, cz + r); z++) {
       for (let x = Math.max(0, cx - r); x <= Math.min(N - 1, cx + r); x++) {
@@ -305,10 +316,11 @@ export class GameSim {
         if (d > r) continue;
         const w = 1 - d / r;
         this.height[z * N + x] += CFG.leveeHeight * (0.35 + 0.65 * w);
+        this.raiseCount[z * N + x] += 1;
       }
     }
     computeNormals(this.height, this.normals);
-    return { ok: true };
+    return { ok: true, cost };
   }
 
   placePump(cx: number, cz: number): PlaceResult {

@@ -18,7 +18,7 @@ export default function Toolbar({ phase, tool, onTool, onStart, onReset }: Props
       </button>
       <div className="sep" />
       <button className={tool === 'levee' ? 'on' : ''} disabled={running} onClick={() => onTool('levee')}>
-        ⛰ 加高场地<span className="cost">{CFG.leveeCost}</span>
+        ⛰ 加高场地<span className="cost">{CFG.leveeCost} 起</span>
       </button>
       <button className={tool === 'pump' ? 'on' : ''} disabled={running} onClick={() => onTool('pump')}>
         💧 水泵<span className="cost">{CFG.pumpCost}</span>

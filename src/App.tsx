@@ -27,14 +27,16 @@ export default function App() {
   const [scenarioId, setScenarioId] = useState<ScenarioId>('canyon');
   const [tool, setTool] = useState<Tool>('levee');
   const [toast, setToast] = useState('');
+  const [toastAlert, setToastAlert] = useState(false);
   const toastTimer = useRef<number | null>(null);
   const lastPhase = useRef<Stats['phase']>('prepare');
   const [sessions, setSessions] = useState(() => sessionCount());
 
   const scenario = SCENARIOS[scenarioId];
 
-  const showToast = useCallback((text: string) => {
+  const showToast = useCallback((text: string, alert = true) => {
     setToast(text);
+    setToastAlert(alert);
     if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(''), 1400);
   }, []);
@@ -68,9 +70,13 @@ export default function App() {
 
   const handlePlace = useCallback(
     (result: PlaceResult, cell: { x: number; z: number }) => {
-      if (!result.ok && result.reason) showToast(result.reason);
+      if (!result.ok && result.reason) {
+        showToast(result.reason);
+      } else if (result.ok && result.cost) {
+        showToast(`已花费 ${result.cost}`, false);
+      }
       trackFirstAction('place');
-      track('place', { tool, x: cell.x, z: cell.z, ok: result.ok });
+      track('place', { tool, x: cell.x, z: cell.z, ok: result.ok, cost: result.cost ?? 0 });
       setStats(sim.stats());
     },
     [sim, showToast, tool],
@@ -178,7 +184,7 @@ export default function App() {
         />
 
         <Legend />
-        <div className={`hint ${toast ? 'alert' : ''}`}>{toast || hint}</div>
+        <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>{toast || hint}</div>
       </div>
 
       <Overlay stats={stats} onReset={handleReset} />

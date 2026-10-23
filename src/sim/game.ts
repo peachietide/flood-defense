@@ -101,6 +101,8 @@ export interface Stats {
   hasRing: boolean;
   /** 下一次加高的价格（随已抬次数递增，工具栏要显示和判断） */
   nextLeveeCost: number;
+  /** 已经加高了几次（吸附之后就等于厂址处的抬升次数） */
+  leveeCount: number;
 }
 
 export interface PlaceResult {
@@ -475,6 +477,7 @@ export class GameSim {
       nextLeveeCost: Math.round(
         CFG.leveeCost * (1 + this.raiseCount[this.facility.cz * N + this.facility.cx]),
       ),
+      leveeCount: Math.round(this.raiseCount[this.facility.cz * N + this.facility.cx]),
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,

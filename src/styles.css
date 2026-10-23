@@ -259,6 +259,26 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 布防完了还没开跑：让「开始降雨」自己招手 */
+@keyframes nudgePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 194, 74, 0.55);
+    border-color: rgba(255, 194, 74, 0.45);
+  }
+  55% {
+    box-shadow: 0 0 0 10px rgba(255, 194, 74, 0);
+    border-color: rgba(255, 194, 74, 0.95);
+  }
+}
+
+.toolbar button.nudge:not(:disabled) {
+  color: #ffe1a0;
+  border-color: rgba(255, 194, 74, 0.7);
+  background: rgba(74, 58, 20, 0.92);
+  animation: nudgePulse 1.5s ease-in-out infinite;
+}
+
 .cost {
   margin-left: 4px;
   font-size: 11px;
@@ -417,9 +437,31 @@ button:disabled {
 }
 
 .overlay p {
-  margin: 0 0 20px;
+  margin: 0 0 12px;
   color: #a8b8cf;
   font-size: 14px;
+}
+
+/* 本局防护清单：让玩家看到"我到底做了什么" */
+.ovDefense {
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(120, 160, 220, 0.18);
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
+/* 归因提示：输了要立刻说明原因，否则 11 秒一局根本学不到东西 */
+.ovTip {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: left;
+  color: #ffe4b0;
+  background: rgba(255, 194, 74, 0.1);
+  border: 1px solid rgba(255, 194, 74, 0.32);
 }
 
 /* ---------- 结果面板 ---------- */

@@ -133,13 +133,18 @@ export default function App() {
     downloadJson();
   }, [showToast]);
 
+  // 已经放东西了，就不再教"点哪里"，而是催他开跑——实测有玩家方案做对了却一直没点开始
+  const armed = stats.phase === 'prepare' && (stats.leveeCount > 0 || stats.pumpCount > 0 || stats.hasRing);
+
   const hint =
     stats.phase === 'prepare'
-      ? tool === 'levee'
-        ? '点击光圈内，把场地垫高'
-        : tool === 'ring'
-          ? '点击变电站附近，筑一圈围堰'
-          : '点击光圈内低洼处，放一台水泵'
+      ? armed
+        ? '布防好了？点下面的「开始降雨」'
+        : tool === 'levee'
+          ? '点击光圈内，把场地垫高'
+          : tool === 'ring'
+            ? '点击变电站附近，筑一圈围堰'
+            : '点击光圈内低洼处，放一台水泵'
       : '';
 
   return (
@@ -183,6 +188,7 @@ export default function App() {
           budget={stats.budget}
           nextLeveeCost={stats.nextLeveeCost}
           hasRing={stats.hasRing}
+          nudge={armed}
           onTool={setTool}
           onStart={handleStart}
           onReset={handleReset}

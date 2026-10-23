@@ -7,6 +7,8 @@ interface Props {
   budget: number;
   nextLeveeCost: number;
   hasRing: boolean;
+  /** 已经布防过东西，提示玩家可以开跑了 */
+  nudge?: boolean;
   onTool: (tool: Tool) => void;
   onStart: () => void;
   onReset: () => void;
@@ -18,6 +20,7 @@ export default function Toolbar({
   budget,
   nextLeveeCost,
   hasRing,
+  nudge = false,
   onTool,
   onStart,
   onReset,
@@ -30,7 +33,7 @@ export default function Toolbar({
 
   return (
     <div className="panel toolbar">
-      <button onClick={onStart} disabled={phase !== 'prepare'}>
+      <button className={nudge && !running ? 'nudge' : ''} onClick={onStart} disabled={phase !== 'prepare'}>
         ▶ 开始降雨
       </button>
       <div className="sep" />

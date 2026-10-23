@@ -129,7 +129,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     rainRate: 0.115,
     rainShape: 'peak',
     duration: 45,
-    budget: 1000,
+    budget: 450,
     damageRate: 12,
   },
 
@@ -156,7 +156,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     rainRate: 0.068,
     rainShape: 'front',
     duration: 90,
-    budget: 1000,
+    budget: 320,
     damageRate: 7,
   },
 
@@ -183,7 +183,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     rainRate: 0.098,
     rainShape: 'double',
     duration: 60,
-    budget: 1000,
+    budget: 450,
     damageRate: 10,
   },
 };

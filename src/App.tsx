@@ -116,6 +116,17 @@ export default function App() {
     [sim, showToast],
   );
 
+  /** 导出试玩记录。即使计数为 0 也允许点，避免按钮一直是灰的让人以为坏了 */
+  const handleExport = useCallback(() => {
+    const n = sessionCount();
+    setSessions(n);
+    if (n === 0) {
+      showToast('还没有记录，先玩一局');
+      return;
+    }
+    downloadJson();
+  }, [showToast]);
+
   const hint =
     stats.phase === 'prepare'
       ? tool === 'levee'
@@ -147,7 +158,7 @@ export default function App() {
             预算 {scenario.budget} · 时长 {scenario.duration}s · 网格 {(112 * 112 / 1000).toFixed(1)}k
           </div>
 
-          <button className="telBtn" onClick={downloadJson} disabled={sessions === 0}>
+          <button className="telBtn" onClick={handleExport}>
             导出试玩记录（{sessions}）
           </button>
         </div>

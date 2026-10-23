@@ -41,22 +41,36 @@ let current: SessionRecord | null = null;
 let zero: number = 0;
 let firstActionDone = false;
 
+/**
+ * localStorage 不可用时（隐私模式、file:// 限制、配额满）的内存副本。
+ * 有它兜底，即使用不了存储，本次会话的记录仍然能导出——
+ * 总比"按钮永远是灰的"好。
+ */
+let memorySessions: SessionRecord[] = [];
+let memoryOnly = false;
+
 function readAll(): SessionRecord[] {
+  if (memoryOnly) return memorySessions.slice();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return memorySessions.slice();
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as SessionRecord[]) : [];
   } catch {
-    return [];
+    memoryOnly = true;
+    return memorySessions.slice();
   }
 }
 
 function writeAll(list: SessionRecord[]): void {
+  const capped = list.slice(-MAX_SESSIONS);
+  memorySessions = capped;
+  if (memoryOnly) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(-MAX_SESSIONS)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(capped));
   } catch {
-    // 隐私模式或配额满，静默失败——埋点不能影响游戏本身
+    // 隐私模式或配额满：降级为内存模式，不影响游戏本身
+    memoryOnly = true;
   }
 }
 

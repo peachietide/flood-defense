@@ -236,9 +236,10 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
     ringGeo.setIndex(ringIdx);
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffc24a,
+      // 品红：和土黄地形、蓝绿洪水都不撞色，一眼能看出是界面标记而不是地面上的东西
+      color: 0xff5fd2,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.5,
       side: THREE.DoubleSide,
       depthWrite: false,
       // 关掉深度测试：光圈是操作指引，不是场景实物。

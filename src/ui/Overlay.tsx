@@ -14,19 +14,21 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
   if (stats.pumpCount > 0) parts.push(`水泵 ${stats.pumpCount} 台`);
   const defense = parts.length ? parts.join(' · ') : '没有做任何防护';
 
-  // 输了要告诉玩家"为什么输"，否则 11 秒一局根本学不到东西
+  // 输了要说清楚"发生了什么"，但不要说"该怎么做"——
+  // 给答案会把玩法变成执行，玩家就没有自己推理的空间了。
   let tip = '';
   if (!won) {
+    const d = fmtDepth(site.depth);
     if (!parts.length) {
-      tip = '这一局什么都没做。先加高场地，或者围堰配水泵。';
+      tip = `这一局没有做任何防护，洪水直接漫过厂坪，最大水深 ${d} m。`;
     } else if (stats.hasRing && stats.pumpCount === 0) {
-      tip = '围了堰却没配水泵：堤内的雨排不出去，反而比不修更糟。';
+      tip = '围堰把外面的洪水挡住了，但堤内的雨排不出去——水位是从围堰里面涨上来的。';
     } else if (stats.pumpCount > 0 && stats.pumpFlooded === stats.pumpCount) {
-      tip = '水泵全被淹停机了（泵房进水超过 1 米），应该放在地势更高的地方。';
+      tip = `${stats.pumpFlooded} 台水泵全部被水淹停（泵房进水超过 1 米），实际上没有起抽水作用。`;
     } else if (stats.leveeCount === 1) {
-      tip = '只加高了一次，洪水位还差一截——再加高一次就够。';
+      tip = `只加高了一次，最大水深仍有 ${d} m，水位还是漫过了厂坪。`;
     } else {
-      tip = '加高和泵都用了还是没守住，试试更彻底的方案：加高两次，或围堰 + 水泵。';
+      tip = `加高和水泵都用了，最大水深仍有 ${d} m，防护没有盖过这一场洪水。`;
     }
   }
 

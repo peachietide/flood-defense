@@ -23,7 +23,7 @@ export const CFG = {
   leveeMaxDistance: 8,
   pumpRadius: 4,
   /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
-  pumpFlow: 90,
+  pumpFlow: 4,
   /** 泵房进水超过这个深度就停机 */
   pumpFloodDepth: 1.0,
   /** 超过这个水深算"被淹" */

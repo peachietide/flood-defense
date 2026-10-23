@@ -140,6 +140,22 @@ export function generateTerrain(cfg: TerrainConfig): Terrain {
     }
   }
 
+  // 场地本地降雨：厂址附近保留一部分直接降雨。
+  // 真实的厂址内涝主要来自"落在自己头上的雨"，而不是远处的洪水。
+  // 有了这一项，场地上的水才需要靠排水泵解决——否则水泵无事可做。
+  const localAmp = 0.3;
+  const localSigma = 13;
+  const inv2s2 = 1 / (2 * localSigma * localSigma);
+  for (let z = 0; z < N; z++) {
+    const dz = z - facility.cz;
+    for (let x = 0; x < N; x++) {
+      const dx = x - facility.cx;
+      const local = localAmp * Math.exp(-(dx * dx + dz * dz) * inv2s2);
+      const i = z * N + x;
+      if (local > rainMask[i]) rainMask[i] = local;
+    }
+  }
+
   computeNormals(height, normals);
   return { height, normals, rainMask, facility };
 }

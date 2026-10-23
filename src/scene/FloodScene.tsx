@@ -213,6 +213,21 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     facilityGroup.add(roof);
     scene.add(facilityGroup);
 
+    // ---------- 场地范围光圈 ----------
+    // 玩家最常见的失误是在离变电站很远的地方施工（半径只有 4 格，够不着）。
+    // 用一圈呼吸的光带把"该在哪儿施工"画出来。
+    const ringGeo = new THREE.RingGeometry(5.4, 6.4, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffc24a,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const siteRing = new THREE.Mesh(ringGeo, ringMat);
+    siteRing.rotation.x = -Math.PI / 2;
+    scene.add(siteRing);
+
     // ---------- 水泵标记 ----------
     const pumpGroup = new THREE.Group();
     const pumpGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.4, 12);
@@ -470,6 +485,18 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
         sim.facility.cz - N / 2 + 0.5,
       );
 
+      // 场地光圈：贴着地面，缓慢呼吸；布防结束后收敛，不干扰看洪水
+      siteRing.position.set(
+        sim.facility.cx - N / 2 + 0.5,
+        sim.height[fi] + 0.25,
+        sim.facility.cz - N / 2 + 0.5,
+      );
+      const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
+      const preparing = sim.phase === 'prepare';
+      ringMat.opacity = (preparing ? 0.22 : 0.06) + (preparing ? 0.3 : 0.05) * pulse;
+      const s = 1 + (preparing ? 0.04 * pulse : 0);
+      siteRing.scale.set(s, s, 1);
+
       hudTimer += dt;
       if (hudTimer > 0.1) {
         hudTimer = 0;
@@ -503,6 +530,8 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       pumpGeo.dispose();
       pumpMat.dispose();
       pumpMatOff.dispose();
+      ringGeo.dispose();
+      ringMat.dispose();
       skirtGeo.dispose();
       skirtMat.dispose();
       renderer.dispose();

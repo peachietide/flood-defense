@@ -19,6 +19,8 @@ export const CFG = {
   pumpCost: 200,
   leveeRadius: 4,
   leveeHeight: 3.2,
+  /** 加高施工点距变电站中心的最大格数，超出则拒绝（半径只有 4，太远完全没作用） */
+  leveeMaxDistance: 8,
   pumpRadius: 4,
   /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
   pumpFlow: 90,
@@ -298,6 +300,13 @@ export class GameSim {
 
   placeLevee(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+
+    // 离变电站太远时加高毫无意义（作用半径只有 4 格），直接拒绝，避免白花预算
+    const dcx = cx - this.facility.cx;
+    const dcz = cz - this.facility.cz;
+    if (Math.sqrt(dcx * dcx + dcz * dcz) > CFG.leveeMaxDistance) {
+      return { ok: false, reason: '太远了，靠近变电站施工' };
+    }
 
     // 成本随"这个位置已经抬了几次"递增：120 → 240 → 360 …
     // 对应真实工程里土方量随填高非线性增长。半径内的相邻位置也会继承等级，

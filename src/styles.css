@@ -74,7 +74,8 @@ body,
 
 .info .dim {
   margin-top: 8px;
-  color: #6b7f9c;
+  color: #9fb2cc;
+  font-size: 12.5px;
 }
 
 .info .warn {
@@ -331,6 +332,26 @@ button:disabled {
 .hintIcon {
   font-size: 19px;
   line-height: 1;
+}
+
+.hintText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.hintMain {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* "拖动旋转 · 滚轮缩放" 这类操作说明：比主提示小一号，但必须看得清 */
+.hintSub {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(255, 244, 221, 0.72);
 }
 
 .hint.alert {

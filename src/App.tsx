@@ -189,7 +189,12 @@ export default function App() {
         {toast || hint ? (
           <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>
             <span className="hintIcon">{toast && toastAlert ? '⚠' : '👆'}</span>
-            <span>{toast || hint}</span>
+            <span className="hintText">
+              <span className="hintMain">{toast || hint}</span>
+              {!toast && stats.phase === 'prepare' ? (
+                <span className="hintSub">拖动旋转 · 滚轮缩放 · 点击施工</span>
+              ) : null}
+            </span>
           </div>
         ) : null}
       </div>

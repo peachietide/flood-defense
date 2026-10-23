@@ -136,8 +136,8 @@ export default function App() {
   const hint =
     stats.phase === 'prepare'
       ? tool === 'levee'
-        ? '点击变电站周围，把场地垫高到洪水位以上'
-        : '点击低洼处布置水泵，会持续抽水'
+        ? '点击光圈内，把场地垫高到洪水位以上'
+        : '点击光圈内低洼处，布置抽水泵'
       : '';
 
   return (
@@ -184,7 +184,9 @@ export default function App() {
         />
 
         <Legend />
-        <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>{toast || hint}</div>
+        {toast || hint ? (
+          <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>{toast || hint}</div>
+        ) : null}
       </div>
 
       <Overlay stats={stats} onReset={handleReset} />

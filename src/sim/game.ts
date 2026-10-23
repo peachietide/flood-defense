@@ -99,6 +99,8 @@ export interface Stats {
   pumpFlooded: number;
   /** 是否已围堰 */
   hasRing: boolean;
+  /** 下一次加高的价格（随已抬次数递增，工具栏要显示和判断） */
+  nextLeveeCost: number;
 }
 
 export interface PlaceResult {
@@ -317,26 +319,33 @@ export class GameSim {
   placeLevee(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
 
-    // 离变电站太远时加高毫无意义（作用半径只有 4 格），直接拒绝，避免白花预算
-    const dcx = cx - this.facility.cx;
-    const dcz = cz - this.facility.cz;
+    const fx = this.facility.cx;
+    const fz = this.facility.cz;
+
+    // 离变电站太远时直接拒绝，避免白花预算
+    const dcx = cx - fx;
+    const dcz = cz - fz;
     if (Math.sqrt(dcx * dcx + dcz * dcz) > CFG.leveeMaxDistance) {
       return { ok: false, reason: '太远了，靠近变电站施工' };
     }
 
-    // 成本随"这个位置已经抬了几次"递增：120 → 240 → 360 …
-    // 对应真实工程里土方量随填高非线性增长。半径内的相邻位置也会继承等级，
-    // 避免"挪一格重新按 120 收费"的漏洞。
-    const level = this.raiseCount[cz * N + cx];
+    // 吸附到厂址中心。
+    // 加高半径是 4 格，而 4.0 格和 4.12 格在画面上完全看不出区别，
+    // 结果却是一个守住、一个全灭——这不是难度，是隐藏规则。
+    // 该考察玩家的是"选什么措施、花多少钱"，不是"点得准不准"。
+
+    // 成本随已抬次数递增：120 → 240 → 360 …
+    // 对应真实工程里土方量随填高非线性增长。
+    const level = this.raiseCount[fz * N + fx];
     const cost = Math.round(CFG.leveeCost * (1 + level));
     if (this.budget < cost) return { ok: false, reason: `预算不足（需 ${cost}）` };
 
     this.budget -= cost;
     const r = CFG.leveeRadius;
-    for (let z = Math.max(0, cz - r); z <= Math.min(N - 1, cz + r); z++) {
-      for (let x = Math.max(0, cx - r); x <= Math.min(N - 1, cx + r); x++) {
-        const dx = x - cx;
-        const dz = z - cz;
+    for (let z = Math.max(0, fz - r); z <= Math.min(N - 1, fz + r); z++) {
+      for (let x = Math.max(0, fx - r); x <= Math.min(N - 1, fx + r); x++) {
+        const dx = x - fx;
+        const dz = z - fz;
         const d = Math.sqrt(dx * dx + dz * dz);
         if (d > r) continue;
         const w = 1 - d / r;
@@ -398,7 +407,7 @@ export class GameSim {
     if (this.budget < CFG.pumpCost) return { ok: false, reason: '预算不足' };
     this.budget -= CFG.pumpCost;
     this.pumps.push({ x: cx, z: cz, flooded: false });
-    return { ok: true };
+    return { ok: true, cost: CFG.pumpCost };
   }
 
   /** 设置降雨重现期倍率。只能在布防阶段改，避免中途改雨强造成结果失真。 */
@@ -463,6 +472,9 @@ export class GameSim {
       pumpCount: this.pumps.length,
       pumpFlooded: this.pumps.reduce((n, p) => n + (p.flooded ? 1 : 0), 0),
       hasRing: this.hasRing,
+      nextLeveeCost: Math.round(
+        CFG.leveeCost * (1 + this.raiseCount[this.facility.cz * N + this.facility.cx]),
+      ),
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,

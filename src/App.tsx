@@ -180,6 +180,9 @@ export default function App() {
         <Toolbar
           phase={stats.phase}
           tool={tool}
+          budget={stats.budget}
+          nextLeveeCost={stats.nextLeveeCost}
+          hasRing={stats.hasRing}
           onTool={setTool}
           onStart={handleStart}
           onReset={handleReset}

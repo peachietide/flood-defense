@@ -295,28 +295,59 @@ button:disabled {
 /* ---------- 提示 ---------- */
 .hint {
   position: absolute;
-  bottom: 88px;
+  bottom: 92px;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 62vw;
-  padding: 8px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: #dbe8fa;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 74vw;
+  padding: 12px 28px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  color: #fff4dd;
   text-align: center;
   white-space: nowrap;
-  background: rgba(16, 25, 42, 0.86);
-  border: 1px solid rgba(120, 170, 230, 0.3);
+  background: linear-gradient(180deg, rgba(40, 58, 92, 0.96), rgba(17, 26, 44, 0.97));
+  border: 1px solid rgba(255, 194, 74, 0.55);
   border-radius: 999px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  animation: hintGlow 2.4s ease-in-out infinite;
+}
+
+/* 呼吸光晕：不刺眼，但能让人注意到这里有话要说 */
+@keyframes hintGlow {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(255, 194, 74, 0.4);
+  }
+  55% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 12px rgba(255, 194, 74, 0);
+  }
+}
+
+.hintIcon {
+  font-size: 19px;
+  line-height: 1;
 }
 
 .hint.alert {
-  color: #ffc0c0;
-  background: rgba(58, 16, 16, 0.88);
-  border-color: rgba(255, 107, 107, 0.5);
+  color: #ffe0e0;
+  background: linear-gradient(180deg, rgba(96, 28, 28, 0.96), rgba(48, 14, 14, 0.97));
+  border-color: rgba(255, 120, 120, 0.65);
+  animation: hintGlowRed 1.2s ease-in-out infinite;
+}
+
+@keyframes hintGlowRed {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(255, 100, 100, 0.45);
+  }
+  55% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 0 10px rgba(255, 100, 100, 0);
+  }
 }
 
 /* ---------- 结算 ---------- */

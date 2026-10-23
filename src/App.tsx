@@ -136,10 +136,10 @@ export default function App() {
   const hint =
     stats.phase === 'prepare'
       ? tool === 'levee'
-        ? '点击光圈内，把场地垫高到洪水位以上'
+        ? '点击光圈内，把场地垫高'
         : tool === 'ring'
-          ? '点击变电站附近，围一圈挡水的堰（堤内积水要靠水泵排）'
-          : '点击光圈内低洼处，布置抽水泵'
+          ? '点击变电站附近，筑一圈围堰'
+          : '点击光圈内低洼处，放一台水泵'
       : '';
 
   return (
@@ -187,7 +187,10 @@ export default function App() {
 
         <Legend />
         {toast || hint ? (
-          <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>{toast || hint}</div>
+          <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>
+            <span className="hintIcon">{toast && toastAlert ? '⚠' : '👆'}</span>
+            <span>{toast || hint}</span>
+          </div>
         ) : null}
       </div>
 

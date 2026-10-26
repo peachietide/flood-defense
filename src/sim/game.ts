@@ -109,8 +109,6 @@ export interface Stats {
   parCost: number;
   /** 厂坪当前水深 */
   siteDepthNow: number;
-  /** 预计还有多少秒漫过厂坪（-1 = 暂时不会） */
-  etaToDamage: number;
   /** 洪峰是否已过（水位开始回落） */
   peakPassed: boolean;
 }
@@ -151,10 +149,6 @@ export class GameSim {
   raiseCount = new Float32Array(N * N);
   /** 是否已围堰 */
   hasRing = false;
-  /** 厂坪水深的上一帧值，用来估计上涨速度 */
-  private prevSiteDepth = 0;
-  /** 厂坪水深上涨速度（指数平滑） */
-  private siteRiseRate = 0;
   /** 全域最大水深的历史峰值 */
   private peakDepth = 0;
   /** 洪峰是否已过 */
@@ -201,8 +195,6 @@ export class GameSim {
     this.arrival.fill(-1);
     this.raiseCount.fill(0);
     this.hasRing = false;
-    this.prevSiteDepth = 0;
-    this.siteRiseRate = 0;
     this.peakDepth = 0;
     this.peakPassed = false;
     this.elapsed = 0;
@@ -350,16 +342,6 @@ export class GameSim {
         this.peakPassed = true;
       }
     }
-
-    // 厂坪水深的上涨速度（平滑），用来预报"还有几秒漫过厂坪"。
-    // 等待期有 90 秒，光看水涨太无聊；给一个倒计时，等待就变成盯预警。
-    const fi = this.facility.cz * N + this.facility.cx;
-    const dNow = this.depth[fi];
-    if (wasRunning && dt > 1e-6) {
-      const rate = (dNow - this.prevSiteDepth) / dt;
-      this.siteRiseRate = this.siteRiseRate * 0.88 + rate * 0.12;
-    }
-    this.prevSiteDepth = dNow;
   }
 
   placeLevee(cx: number, cz: number): PlaceResult {
@@ -528,12 +510,6 @@ export class GameSim {
       grade: this.scenario.budget - this.budget <= this.scenario.parCost * 1.08 ? 'A' : 'B',
       parCost: this.scenario.parCost,
       siteDepthNow: this.depth[this.facility.cz * N + this.facility.cx],
-      etaToDamage: (() => {
-        const d = this.depth[this.facility.cz * N + this.facility.cx];
-        if (d >= CFG.damageDepth) return 0;
-        if (this.siteRiseRate < 0.004) return -1;
-        return Math.min(99, (CFG.damageDepth - d) / this.siteRiseRate);
-      })(),
       peakPassed: this.peakPassed,
       site: this.metricAt(fi),
       domain: this.domainMetric(),

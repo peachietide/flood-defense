@@ -172,12 +172,6 @@ export default function App() {
   const pumpNeedsRing = stats.phase === 'prepare' && stats.pumpCount > 0 && !stats.hasRing;
   const canAffordRing = stats.budget >= CFG.ringCost;
 
-  // 运行中：临近进水时给出倒计时，把"干等"变成"盯预警"
-  const eta = stats.etaToDamage;
-  const etaWarn =
-    stats.phase === 'running' && eta >= 0 && eta <= 20 && stats.siteDepthNow < CFG.damageDepth;
-  const etaText = etaWarn ? `预计 ${Math.max(1, Math.ceil(eta))} s 后漫过厂坪` : '';
-
   const hint =
     stats.phase === 'prepare'
       ? ringNeedsPump
@@ -199,7 +193,7 @@ export default function App() {
                 : tool === 'ring'
                   ? '在变电站附近点击，修筑围堰（堤内积水需水泵排出）'
                   : '在光圈内低洼处点击，布置水泵'
-      : etaText;
+      : '';
 
   return (
     <div className="app">
@@ -252,8 +246,8 @@ export default function App() {
 
         <Legend />
         {toast || hint ? (
-          <div className={`hint ${(toast && toastAlert) || etaWarn ? 'alert' : ''}`}>
-            <span className="hintIcon">{toast && toastAlert ? '⚠' : etaWarn ? '⏱' : '👆'}</span>
+          <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>
+            <span className="hintIcon">{toast && toastAlert ? '⚠' : '👆'}</span>
             <span className="hintText">
               <span className="hintMain">{toast || hint}</span>
               {!toast && stats.phase === 'prepare' ? (

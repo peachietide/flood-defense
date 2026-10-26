@@ -76,11 +76,16 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // ACES 色调映射：高光不再"发死"，暗部有层次
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    // 阴影：物体有影子才会"落"在地形上，否则像贴上去的
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0b1220');
-    scene.fog = new THREE.Fog('#0b1220', 190, 340);
+    scene.fog = new THREE.Fog('#16233a', 200, 380);
 
     const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 2000);
 
@@ -91,10 +96,45 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     controls.maxDistance = 400;
     controls.maxPolarAngle = Math.PI * 0.46;
 
+    // ---------- 天空：一张竖向渐变贴图贴在反向球上 ----------
+    {
+      const c = document.createElement('canvas');
+      c.width = 8;
+      c.height = 256;
+      const g = c.getContext('2d');
+      if (g) {
+        const grad = g.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0, '#0a1120');
+        grad.addColorStop(0.55, '#16233a');
+        grad.addColorStop(1, '#2b3d55');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, 8, 256);
+      }
+      const skyTex = new THREE.CanvasTexture(c);
+      skyTex.colorSpace = THREE.SRGBColorSpace;
+      const sky = new THREE.Mesh(
+        new THREE.SphereGeometry(600, 24, 16),
+        new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false }),
+      );
+      sky.renderOrder = -1;
+      scene.add(sky);
+    }
+
     scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x2a2418, 1.15));
 
     const sun = new THREE.DirectionalLight(0xfff2dc, 2.1);
     sun.position.set(70, 120, 45);
+    sun.castShadow = true;
+    // 正交阴影相机覆盖整个计算域
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -80;
+    sun.shadow.camera.right = 80;
+    sun.shadow.camera.top = 80;
+    sun.shadow.camera.bottom = -80;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 320;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.6;
     scene.add(sun);
 
     const rim = new THREE.DirectionalLight(0x6f9bd8, 0.55);
@@ -146,6 +186,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     const terrainMat = new THREE.MeshLambertMaterial({ vertexColors: true });
     const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
     terrainMesh.frustumCulled = false;
+    terrainMesh.receiveShadow = true;
     scene.add(terrainMesh);
 
     const waterGeo = makeGeometry();
@@ -208,12 +249,15 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       new THREE.MeshStandardMaterial({ color: 0xf0c040, emissive: 0x4a3500, roughness: 0.55, metalness: 0.15 }),
     );
     body.position.y = 1.3;
+    body.castShadow = true;
+    body.receiveShadow = true;
     facilityGroup.add(body);
     const roof = new THREE.Mesh(
       new THREE.BoxGeometry(5.2, 0.32, 5.2),
       new THREE.MeshStandardMaterial({ color: 0xfff0a0, emissive: 0x2a2000, roughness: 0.7 }),
     );
     roof.position.y = 2.76;
+    roof.castShadow = true;
     facilityGroup.add(roof);
     scene.add(facilityGroup);
 
@@ -323,6 +367,34 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       ringGeo.attributes.position.needsUpdate = true;
       ringGeo.computeBoundingSphere();
     }
+
+    // ---------- 降雨 ----------
+    // 整个游戏讲的是一场暴雨，但原来画面上看不到一滴雨。
+    // 雨丝落在上游集水区（跟降雨掩膜一致），把"雨 → 汇流 → 淹厂址"这条因果链显出来。
+    const RAIN_DROPS = 1500;
+    const rainPos = new Float32Array(RAIN_DROPS * 6);
+    const dropU = new Float32Array(RAIN_DROPS); // 世界 x 方向的归一化位置
+    const dropW = new Float32Array(RAIN_DROPS); // 沿 z（上游 → 下游）的归一化位置
+    const dropY = new Float32Array(RAIN_DROPS);
+    const dropV = new Float32Array(RAIN_DROPS); // 下落速度
+    for (let i = 0; i < RAIN_DROPS; i++) {
+      dropU[i] = Math.random();
+      dropW[i] = Math.random();
+      dropY[i] = -18 + Math.random() * 70;
+      dropV[i] = 16 + Math.random() * 22;
+    }
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+    const rainMat = new THREE.LineBasicMaterial({
+      color: 0xbfe0ff,
+      transparent: true,
+      opacity: 0.3,
+      depthWrite: false,
+    });
+    const rainMesh = new THREE.LineSegments(rainGeo, rainMat);
+    rainMesh.frustumCulled = false;
+    rainMesh.visible = false;
+    scene.add(rainMesh);
 
     // ---------- 水泵标记 ----------
     // 原来只是一个 r=0.9 的小圆柱，在 112 格宽的场景里几乎看不见。
@@ -590,10 +662,13 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
 
       const body = new THREE.Mesh(pumpBodyGeo, pumpMat);
       body.position.y = 1.3;
+      body.castShadow = true;
+      body.receiveShadow = true;
       g.add(body);
 
       const cap = new THREE.Mesh(pumpCapGeo, pumpCapMat);
       cap.position.y = 2.95;
+      cap.castShadow = true;
       g.add(cap);
 
       const disc = new THREE.Mesh(pumpDiscGeo, pumpDiscMat);
@@ -633,6 +708,37 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       }
     }
 
+    /** 雨丝：只在降雨期间显示，密度和透明度跟着当前雨强走 */
+    function updateRain(dtSim: number) {
+      const raining = sim.phase === 'running' && sim.rainNow > 0.02;
+      rainMesh.visible = raining;
+      if (!raining) return;
+
+      const endRatio = sim.scenario.terrain.catchmentEnd;
+      const halfN = N / 2;
+      for (let i = 0; i < RAIN_DROPS; i++) {
+        let y = dropY[i] - dropV[i] * dtSim;
+        if (y < -20) y += 70;
+        dropY[i] = y;
+
+        const wx = (dropU[i] - 0.5) * N;
+        const wz = -halfN + dropW[i] * endRatio * N;
+        const len = 1.4 + dropV[i] * 0.06;
+        const o = i * 6;
+        rainPos[o] = wx;
+        rainPos[o + 1] = y;
+        rainPos[o + 2] = wz;
+        rainPos[o + 3] = wx;
+        rainPos[o + 4] = y - len;
+        rainPos[o + 5] = wz;
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+
+      const dens = Math.min(1, sim.rainNow / 1.8);
+      rainGeo.setDrawRange(0, Math.max(2, Math.floor(RAIN_DROPS * dens) * 2));
+      rainMat.opacity = 0.08 + 0.26 * dens;
+    }
+
     // 固定步长：物理永远以 1/60 秒推进，与帧率和倍速无关。
     // 之前直接把帧间隔当步长，实测同一套方案在不同帧率下峰值能差 28%
     // （园区 1.171 m @60fps vs 0.838 m @10fps），卡在阈值附近时胜负会翻。
@@ -664,6 +770,8 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
 
       updateGeometry();
       syncPumps();
+      // 雨丝按模拟时间下落：2× 倍速下雨也下得快一倍
+      updateRain(Math.min(frameDt, 0.05) * speed);
 
       const fi = sim.facility.cz * N + sim.facility.cx;
       // 不能对高程做 Math.max(..., 0)：峡谷场景厂址在 -14 米，
@@ -729,6 +837,8 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       ringGeo.dispose();
       ringMat.dispose();
       dashTex.dispose();
+      rainGeo.dispose();
+      rainMat.dispose();
       skirtGeo.dispose();
       skirtMat.dispose();
       renderer.dispose();

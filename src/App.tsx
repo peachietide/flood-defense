@@ -200,6 +200,8 @@ export default function App() {
       <FloodScene sim={sim} tool={tool} speed={speed} onStats={handleStats} onPlace={handlePlace} />
 
       <div className="hud">
+        {/* 很淡的暗角：把视线往中间收，画面不至于"平" */}
+        <div className="vignette" />
         <div className="panel info">
           <b>山洪防线</b>
           <span className="tag">原型演示</span>

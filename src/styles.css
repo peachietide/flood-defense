@@ -336,8 +336,20 @@ button:disabled {
   border-radius: 2px;
 }
 
-/* ---------- 提示 ---------- */
-/* 浅色卡片：整个场景是深色的，浅色块在对比度上天然跳出来，
+/* ---------- 画面暗角 ---------- */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    rgba(0, 0, 0, 0) 42%,
+    rgba(0, 0, 0, 0.18) 72%,
+    rgba(0, 0, 0, 0.46) 100%
+  );
+}
+
+/* ---------- 提示 ---------- *//* 浅色卡片：整个场景是深色的，浅色块在对比度上天然跳出来，
    不需要靠更亮的描边去抢注意力。 */
 .hint {
   position: absolute;

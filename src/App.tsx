@@ -151,19 +151,35 @@ export default function App() {
     stats.phase === 'prepare' &&
     ((tool === 'ring' && stats.hasRing) || stats.budget < toolCost);
 
+  // 围堰单独用必输：它只挡外面的洪水，堤内的积水得靠水泵排。
+  // 建完就催"可以开跑了"会把人送进一个注定失败的局。
+  const ringNeedsPump = stats.phase === 'prepare' && stats.hasRing && stats.pumpCount === 0;
+  const canAffordPump = stats.budget >= CFG.pumpCost;
+  // 反过来也一样：没有围堰，水泵只能排出 50 m² 内的水，挡不住外面来的洪水
+  const pumpNeedsRing = stats.phase === 'prepare' && stats.pumpCount > 0 && !stats.hasRing;
+  const canAffordRing = stats.budget >= CFG.ringCost;
+
   const hint =
     stats.phase === 'prepare'
-      ? toolBlocked
-        ? tool === 'ring' && stats.hasRing
-          ? '围堰已经建好了，可以开跑或者重来'
-          : `预算不够了（还差 ${toolCost - stats.budget}）——可以开跑，或者重来`
-        : armed
-          ? '布防好了？点下面的「开始降雨」'
-          : tool === 'levee'
-            ? '点击光圈内，把场地垫高'
-            : tool === 'ring'
-              ? '点击变电站附近，筑一圈围堰'
-              : '点击光圈内低洼处，放一台水泵'
+      ? ringNeedsPump
+        ? canAffordPump
+          ? '围堰只挡住外面的洪水——堤内的积水要靠水泵排出去'
+          : '围堰只挡住外面的洪水，但已经买不起水泵了——这局很难守住，可以重来'
+        : pumpNeedsRing
+          ? canAffordRing
+            ? '水泵只排得动堤内的积水——外面的洪水还需要围堰挡住'
+            : '水泵只排得动堤内的积水，但已经买不起围堰了——这局很难守住'
+          : toolBlocked
+            ? tool === 'ring' && stats.hasRing
+              ? '围堰已经建好了，可以开跑或者重来'
+              : `预算不够了（还差 ${toolCost - stats.budget}）——可以开跑，或者重来`
+            : armed
+              ? '布防好了？点下面的「开始降雨」'
+              : tool === 'levee'
+                ? '点击光圈内，把场地垫高'
+                : tool === 'ring'
+                  ? '点击变电站附近筑一圈围堰——堤内的水还要靠水泵排'
+                  : '点击光圈内低洼处，放一台水泵'
       : '';
 
   return (

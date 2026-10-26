@@ -111,8 +111,7 @@ export interface Stats {
   /** 本场景守住所需的最低花费（评级基准） */
   parCost: number;
   /** 厂坪当前水深 */
-  siteDepthNow: number;
-  /** 洪峰是否已过（水位开始回落） */
+  siteDepthNow: number;  /** 洪峰是否已过（水位开始回落） */
   peakPassed: boolean;
 }
 
@@ -152,8 +151,10 @@ export class GameSim {
   raiseCount = new Float32Array(N * N);
   /** 是否已围堰 */
   hasRing = false;
-  /** 全域最大水深的历史峰值 */
-  private peakDepth = 0;
+  /** 淹没面积的历史峰值（判断洪峰用） */
+  private peakFloodedPct = 0;
+  /** 淹没面积开始低于峰值 90% 的时刻，-1 表示还没开始退 */
+  private recedeSince = -1;
   /** 洪峰是否已过 */
   peakPassed = false;
   /** 已模拟的时间（秒） */
@@ -161,6 +162,8 @@ export class GameSim {
 
   /** 归一化雨型曲线（均值 1），长度 101 */
   rainCurve: Float32Array = buildRainCurve('flat');
+  /** 雨型曲线的峰值，用于判断"后面还有没有大雨" */
+  private rainCurveMax = 1;
   /** 当前雨强倍率，用于 UI 显示 */
   rainNow = 1;
   /** 降雨重现期倍率（相对场景基准雨强） */
@@ -182,6 +185,7 @@ export class GameSim {
   reset(): void {
     const s = this.scenario;
     this.rainCurve = buildRainCurve(s.rainShape);
+    this.rainCurveMax = this.rainCurve.reduce((a, b) => Math.max(a, b), 0) || 1;
     this.rainNow = 1;
     const terrain = generateTerrain(s.terrain);
     this.height = terrain.height;
@@ -198,7 +202,8 @@ export class GameSim {
     this.arrival.fill(-1);
     this.raiseCount.fill(0);
     this.hasRing = false;
-    this.peakDepth = 0;
+    this.peakFloodedPct = 0;
+    this.recedeSince = -1;
     this.peakPassed = false;
     this.elapsed = 0;
 
@@ -338,15 +343,52 @@ export class GameSim {
     }
     this.floodedPct = (flooded / (N * N)) * 100;
 
-    // 洪峰是否已过：全域最大水深开始回落，说明最危险的阶段过去了。
-    // 等待期最需要的就是这种"节奏感"——知道自己撑到了哪一步。
+    // 洪峰是否已过：用"淹没面积"判断，而不是全域最大水深。
+    // 最大水深被河道最深的一格钉死（峡谷 14.8 m 几乎不降），用它会导致
+    // 峡谷永远不触发、平原要等到 80 秒（90 秒的局）才触发。
+    // 淹没面积直接反映"水在退"，并且要求持续 6 秒，防止双峰雨型误判。
     if (wasRunning) {
-      if (curMax > this.peakDepth) {
-        this.peakDepth = curMax;
-      } else if (!this.peakPassed && this.peakDepth > 0.5 && curMax < this.peakDepth * 0.96) {
+      if (this.floodedPct > this.peakFloodedPct) this.peakFloodedPct = this.floodedPct;
+      const belowTail = this.floodedPct < this.peakFloodedPct * 0.96;
+      if (!belowTail) {
+        this.recedeSince = -1;
+      } else if (this.recedeSince < 0) {
+        this.recedeSince = this.elapsed;
+      } else if (
+        !this.peakPassed &&
+        this.peakFloodedPct > 10 &&
+        this.elapsed > this.scenario.duration * 0.25 &&
+        this.elapsed - this.recedeSince >= 3 &&
+        // 后面还有大雨就不用报"洪峰已过"：双峰雨型的第一段小回落会误判
+        this.rainAheadFactor() < 0.5 * this.rainCurveMax
+      ) {
+        this.peakPassed = true;
+      }
+
+      // 兜底：过了 60% 的时长、后面的雨已经不大了，就认为最危险的阶段过去了。
+      // 有些工况（比如围堰刚好扛住 100 年）全域水位一直在涨到结束，
+      // 靠"面积回落"永远等不到提示，但玩家其实已经安全了。
+      if (
+        !this.peakPassed &&
+        this.peakFloodedPct > 10 &&
+        this.elapsed > this.scenario.duration * 0.6 &&
+        this.rainAheadFactor() < 0.5 * this.rainCurveMax
+      ) {
         this.peakPassed = true;
       }
     }
+  }
+
+  /** 未来 15% 局时长内的最大雨强倍率（雨型曲线已知，可以"看后面的雨"） */
+  private rainAheadFactor(): number {
+    const n = this.rainCurve.length - 1;
+    const u0 = Math.max(0, Math.min(1, this.elapsed / this.scenario.duration));
+    const u1 = Math.min(1, u0 + 0.15);
+    const i0 = Math.round(u0 * n);
+    const i1 = Math.round(u1 * n);
+    let best = 0;
+    for (let i = i0; i <= i1; i++) if (this.rainCurve[i] > best) best = this.rainCurve[i];
+    return best;
   }
 
   placeLevee(cx: number, cz: number): PlaceResult {

@@ -64,6 +64,14 @@ export interface Scenario {
   budget: number;
   /** 设施被淹时每秒损失的完好度 */
   damageRate: number;
+  /**
+   * 加高的起步价。不同地形的土方单价不同：
+   * 峡谷坡陡、运输难，填方贵；平原土方便宜。
+   * 这让"哪个措施划算"随场景变化，而不是一套答案打天下。
+   */
+  leveeCost: number;
+  /** 本场景守住的最低花费（离线仿真标定），用于结算评级 */
+  parCost: number;
 }
 
 /** 雨型：真实暴雨不是恒定强度，而是有起势、峰值和消退 */
@@ -137,8 +145,10 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     rainRate: 0.115,
     rainShape: 'peak',
     duration: 45,
-    budget: 530,
+    budget: 600,
     damageRate: 12,
+    leveeCost: 220,
+    parCost: 400,
   },
 
   plain: {
@@ -167,6 +177,8 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     duration: 90,
     budget: 510,
     damageRate: 7,
+    leveeCost: 120,
+    parCost: 120,
   },
 
   urban: {
@@ -193,8 +205,10 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     rainRate: 0.098,
     rainShape: 'double',
     duration: 60,
-    budget: 530,
+    budget: 560,
     damageRate: 10,
+    leveeCost: 150,
+    parCost: 450,
   },
 };
 

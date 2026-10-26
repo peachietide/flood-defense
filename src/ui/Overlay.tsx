@@ -44,6 +44,17 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
 
         <div className="ovDefense">本局防护：{defense}</div>
 
+        {won ? (
+          <div className={`ovGrade ${stats.grade}`}>
+            <b>评级 {stats.grade}</b>
+            <span>
+              {stats.grade === 'A'
+                ? `花了 ${stats.spent}，接近这个厂址的最低可行成本`
+                : `花了 ${stats.spent}，其实 ${stats.parCost} 左右就够——还有更省的做法`}
+            </span>
+          </div>
+        ) : null}
+
         <div className="ovGrid">
           <span>降雨重现期</span>
           <span>

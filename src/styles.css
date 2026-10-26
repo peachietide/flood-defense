@@ -464,6 +464,41 @@ button:disabled {
   border: 1px solid rgba(255, 194, 74, 0.32);
 }
 
+/* 成本评级：守住之后才知道"还有更省的做法" */
+.ovGrade {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ovGrade b {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ovGrade span {
+  opacity: 0.82;
+}
+
+.ovGrade.A {
+  color: #9df0b8;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+}
+
+.ovGrade.B {
+  color: #ffd98a;
+  background: rgba(255, 194, 74, 0.1);
+  border: 1px solid rgba(255, 194, 74, 0.32);
+}
+
 /* ---------- 结果面板 ---------- */
 .results {
   top: 16px;

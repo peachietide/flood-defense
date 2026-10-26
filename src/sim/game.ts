@@ -101,6 +101,12 @@ export interface Stats {
   nextLeveeCost: number;
   /** 已经加高了几次（吸附之后就等于厂址处的抬升次数） */
   leveeCount: number;
+  /** 本局已经花掉的钱 */
+  spent: number;
+  /** 成本评级：A = 接近最低可行，B = 守住了但花多了 */
+  grade: 'A' | 'B';
+  /** 本场景守住所需的最低花费（评级基准） */
+  parCost: number;
 }
 
 export interface PlaceResult {
@@ -340,7 +346,7 @@ export class GameSim {
     // 成本按"厂址处已抬次数"递增：120 → 240 → 360 …
     // 对应真实工程里土方量随填高非线性增长。
     const level = this.raiseCount[fz * N + fx];
-    const cost = Math.round(CFG.leveeCost * (1 + level));
+    const cost = Math.round(this.scenario.leveeCost * (1 + level));
     if (this.budget < cost) return { ok: false, reason: `预算不足（需 ${cost}）` };
 
     this.budget -= cost;
@@ -475,9 +481,12 @@ export class GameSim {
       pumpFlooded: this.pumps.reduce((n, p) => n + (p.flooded ? 1 : 0), 0),
       hasRing: this.hasRing,
       nextLeveeCost: Math.round(
-        CFG.leveeCost * (1 + this.raiseCount[this.facility.cz * N + this.facility.cx]),
+        this.scenario.leveeCost * (1 + this.raiseCount[this.facility.cz * N + this.facility.cx]),
       ),
       leveeCount: Math.round(this.raiseCount[this.facility.cz * N + this.facility.cx]),
+      spent: this.scenario.budget - this.budget,
+      grade: this.scenario.budget - this.budget <= this.scenario.parCost * 1.08 ? 'A' : 'B',
+      parCost: this.scenario.parCost,
       site: this.metricAt(fi),
       domain: this.domainMetric(),
       elapsed: this.elapsed,

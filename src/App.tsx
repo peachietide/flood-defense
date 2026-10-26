@@ -135,7 +135,7 @@ export default function App() {
     const n = sessionCount();
     setSessions(n);
     if (n === 0) {
-      showToast('还没有记录，先玩一局');
+      showToast('暂无记录，请先完成一局');
       return;
     }
     downloadJson();
@@ -163,23 +163,23 @@ export default function App() {
     stats.phase === 'prepare'
       ? ringNeedsPump
         ? canAffordPump
-          ? '围堰只挡住外面的洪水——堤内的积水要靠水泵排出去'
-          : '围堰只挡住外面的洪水，但已经买不起水泵了——这局很难守住，可以重来'
+          ? '围堰仅阻挡外部洪水，堤内积水需由水泵排出'
+          : '围堰已建成，但预算不足以配置水泵——本局难以守住，建议重来'
         : pumpNeedsRing
           ? canAffordRing
-            ? '水泵只排得动堤内的积水——外面的洪水还需要围堰挡住'
-            : '水泵只排得动堤内的积水，但已经买不起围堰了——这局很难守住'
+            ? '水泵仅能排除堤内积水，外部洪水仍需围堰阻挡'
+            : '已布置水泵，但预算不足以修建围堰——本局难以守住'
           : toolBlocked
             ? tool === 'ring' && stats.hasRing
-              ? '围堰已经建好了，可以开跑或者重来'
-              : `预算不够了（还差 ${toolCost - stats.budget}）——可以开跑，或者重来`
+              ? '围堰已建成，可以开始降雨或重来'
+              : `预算不足（还差 ${toolCost - stats.budget}）——可以开始降雨，或重来`
             : armed
-              ? '布防好了？点下面的「开始降雨」'
+              ? '布防完成，可以开始降雨'
               : tool === 'levee'
-                ? '点击光圈内，把场地垫高'
+                ? '在光圈内点击，抬高场地'
                 : tool === 'ring'
-                  ? '点击变电站附近筑一圈围堰——堤内的水还要靠水泵排'
-                  : '点击光圈内低洼处，放一台水泵'
+                  ? '在变电站附近点击，修筑围堰（堤内积水需水泵排出）'
+                  : '在光圈内低洼处点击，布置水泵'
       : '';
 
   return (

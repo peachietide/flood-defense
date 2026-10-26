@@ -48,7 +48,7 @@ export default function Toolbar({
       <button
         className={tool === 'ring' ? 'on' : ''}
         disabled={noRing}
-        title={hasRing ? '围堰已经建好' : noRing && !running ? `预算不足（需 ${CFG.ringCost}）` : ''}
+        title={hasRing ? '围堰已建成' : noRing && !running ? `预算不足（需 ${CFG.ringCost}）` : ''}
         onClick={() => onTool('ring')}
       >
         🧱 围堰<span className="cost">{hasRing ? '已建' : CFG.ringCost}</span>

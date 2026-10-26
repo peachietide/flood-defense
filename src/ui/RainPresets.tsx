@@ -19,7 +19,7 @@ export default function RainPresets({ scale, phase, onSelect }: Props) {
             key={p.id}
             className={`chip ${Math.abs(p.scale - scale) < 1e-6 ? 'active' : ''}`}
             disabled={locked}
-            title={locked ? '先结束当前这一局再调整' : p.note}
+            title={locked ? '需先结束本局再调整' : p.note}
             onClick={() => onSelect(p.scale)}
           >
             {p.label}

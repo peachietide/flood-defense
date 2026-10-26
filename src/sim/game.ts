@@ -323,7 +323,7 @@ export class GameSim {
   }
 
   placeLevee(cx: number, cz: number): PlaceResult {
-    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+    if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
 
     const r = CFG.leveeRadius;
     const fx = this.facility.cx;
@@ -333,7 +333,7 @@ export class GameSim {
     // 允许范围就是加高半径本身：落在半径内，厂址中心一定能被抬到（只是强弱不同）；
     // 超出半径布置就是纯白花钱，直接拒绝——不能做成"能点但无效"的隐形陷阱。
     if (dist > r) {
-      return { ok: false, reason: '离变电站太远，抬不到厂址——请点在厂址附近' };
+      return { ok: false, reason: '距离变电站过远，无法抬升厂址——请点击厂址附近' };
     }
 
     // 峡谷地形起伏大、厂址在深坑里很难瞄准，给一点吸附；
@@ -370,11 +370,11 @@ export class GameSim {
    * 它挡住堤外的洪水，但堤内的本地降雨排不出去——所以必须配水泵。
    */
   placeRing(cx: number, cz: number): PlaceResult {
-    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
-    if (this.hasRing) return { ok: false, reason: '围堰已经建好了' };
+    if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
+    if (this.hasRing) return { ok: false, reason: '围堰已建成' };
 
     const d = Math.hypot(cx - this.facility.cx, cz - this.facility.cz);
-    if (d > CFG.ringMaxDistance) return { ok: false, reason: '太远了，靠近变电站' };
+    if (d > CFG.ringMaxDistance) return { ok: false, reason: '距离过远，请靠近变电站' };
     if (this.budget < CFG.ringCost) return { ok: false, reason: `预算不足（需 ${CFG.ringCost}）` };
 
     this.budget -= CFG.ringCost;
@@ -411,7 +411,7 @@ export class GameSim {
   }
 
   placePump(cx: number, cz: number): PlaceResult {
-    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+    if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
     if (this.budget < CFG.pumpCost) return { ok: false, reason: '预算不足' };
     this.budget -= CFG.pumpCost;
     this.pumps.push({ x: cx, z: cz, flooded: false });
@@ -420,7 +420,7 @@ export class GameSim {
 
   /** 设置降雨重现期倍率。只能在布防阶段改，避免中途改雨强造成结果失真。 */
   setRainScale(scale: number): PlaceResult {
-    if (this.phase !== 'prepare') return { ok: false, reason: '已经开始降雨了' };
+    if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
     this.rainScale = scale;
     return { ok: true };
   }

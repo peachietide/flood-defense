@@ -19,7 +19,7 @@ export default function ScenarioBar({ current, phase, onSelect }: Props) {
             key={id}
             className={`chip ${id === current ? 'active' : ''}`}
             disabled={locked}
-            title={locked ? '先结束当前这一局再切换场景' : s.description}
+            title={locked ? '需先结束本局再切换场景' : s.description}
             onClick={() => onSelect(id)}
           >
             {s.name}

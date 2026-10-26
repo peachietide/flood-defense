@@ -12,7 +12,7 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
   if (stats.leveeCount > 0) parts.push(`加高 ${stats.leveeCount} 次`);
   if (stats.hasRing) parts.push('围堰 1 道');
   if (stats.pumpCount > 0) parts.push(`水泵 ${stats.pumpCount} 台`);
-  const defense = parts.length ? parts.join(' · ') : '没有做任何防护';
+  const defense = parts.length ? parts.join(' · ') : '未采取防护措施';
 
   // 输了要说清楚"发生了什么"，但不要说"该怎么做"——
   // 给答案会把玩法变成执行，玩家就没有自己推理的空间了。
@@ -20,15 +20,15 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
   if (!won) {
     const d = fmtDepth(site.depth);
     if (!parts.length) {
-      tip = `这一局没有做任何防护，洪水直接漫过厂坪，最大水深 ${d} m。`;
+      tip = `本局未采取防护措施，洪水漫过厂坪，最大水深 ${d} m。`;
     } else if (stats.hasRing && stats.pumpCount === 0) {
-      tip = '围堰把外面的洪水挡住了，但堤内的雨排不出去——水位是从围堰里面涨上来的。';
+      tip = '围堰阻挡了外部洪水，但堤内降雨无法排出——水位自围堰内部上涨。';
     } else if (stats.pumpCount > 0 && stats.pumpFlooded === stats.pumpCount) {
-      tip = `${stats.pumpFlooded} 台水泵全部被水淹停（泵房进水超过 1 米），实际上没有起抽水作用。`;
+      tip = `${stats.pumpFlooded} 台水泵因泵房进水超过 1 米而停机，未产生抽水效果。`;
     } else if (stats.leveeCount === 1) {
-      tip = `只加高了一次，最大水深仍有 ${d} m，水位还是漫过了厂坪。`;
+      tip = `场地仅加高一次，最大水深仍有 ${d} m，水位超过厂坪。`;
     } else {
-      tip = `加高和水泵都用了，最大水深仍有 ${d} m，防护没有盖过这一场洪水。`;
+      tip = `加高与水泵均已使用，最大水深仍达 ${d} m，防护未覆盖本场洪水。`;
     }
   }
 
@@ -39,7 +39,7 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
         <p>
           {won
             ? `设施完好度 ${Math.round(stats.hp)}% · 剩余预算 ${Math.max(0, stats.budget)} · 淹没面积 ${Math.round(stats.floodedPct)}%`
-            : '本次布防没有挡住这一场雨。'}
+            : '本次布防未能挡住本场降雨。'}
         </p>
 
         <div className="ovDefense">本局防护：{defense}</div>
@@ -49,8 +49,8 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
             <b>评级 {stats.grade}</b>
             <span>
               {stats.grade === 'A'
-                ? `花了 ${stats.spent}，这个厂址守得住的最省做法差不多就是这个量级`
-                : `花了 ${stats.spent}——这还不是最省的做法，还有更便宜就能守住的路子`}
+                ? `花费 ${stats.spent}，接近本厂址守住所需的最低成本`
+                : `花费 ${stats.spent}，并非最省方案——仍有更低的成本可以守住`}
             </span>
           </div>
         ) : null}

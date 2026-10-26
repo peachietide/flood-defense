@@ -126,7 +126,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     name: '峡谷',
     customer: '山区核电厂址',
     description: '窄深河谷，短历时暴雨。洪水来得快、退得也快。',
-    challenge: '汇流时间极短，留给你布防的时间很少',
+    challenge: '汇流时间极短，可用于布防的时间很少',
     terrain: {
       baseHeight: 6,
       relief: 14,
@@ -156,7 +156,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     name: '平原',
     customer: '变电站 / 蓄滞洪区',
     description: '宽浅河谷，长历时降雨。水不深，但淹得很广。',
-    challenge: '淹没范围大，防线长，预算铺不满',
+    challenge: '淹没范围大，防线长，预算难以覆盖全线',
     terrain: {
       baseHeight: 4,
       relief: 6,

@@ -85,7 +85,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog('#16233a', 200, 380);
+    scene.fog = new THREE.Fog('#2e445f', 200, 380);
 
     const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 2000);
 
@@ -104,9 +104,9 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       const g = c.getContext('2d');
       if (g) {
         const grad = g.createLinearGradient(0, 0, 0, 256);
-        grad.addColorStop(0, '#0a1120');
-        grad.addColorStop(0.55, '#16233a');
-        grad.addColorStop(1, '#2b3d55');
+        grad.addColorStop(0, '#0f1a2e');
+        grad.addColorStop(0.55, '#1d2e46');
+        grad.addColorStop(1, '#36506e');
         g.fillStyle = grad;
         g.fillRect(0, 0, 8, 256);
       }
@@ -371,7 +371,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     // ---------- 降雨 ----------
     // 整个游戏讲的是一场暴雨，但原来画面上看不到一滴雨。
     // 雨丝落在上游集水区（跟降雨掩膜一致），把"雨 → 汇流 → 淹厂址"这条因果链显出来。
-    const RAIN_DROPS = 1500;
+    const RAIN_DROPS = 2200;
     const rainPos = new Float32Array(RAIN_DROPS * 6);
     const dropU = new Float32Array(RAIN_DROPS); // 世界 x 方向的归一化位置
     const dropW = new Float32Array(RAIN_DROPS); // 沿 z（上游 → 下游）的归一化位置
@@ -386,9 +386,9 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     const rainGeo = new THREE.BufferGeometry();
     rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
     const rainMat = new THREE.LineBasicMaterial({
-      color: 0xbfe0ff,
+      color: 0xdcefff,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.45,
       depthWrite: false,
     });
     const rainMesh = new THREE.LineSegments(rainGeo, rainMat);
@@ -723,7 +723,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
 
         const wx = (dropU[i] - 0.5) * N;
         const wz = -halfN + dropW[i] * endRatio * N;
-        const len = 1.4 + dropV[i] * 0.06;
+        const len = 2.2 + dropV[i] * 0.08;
         const o = i * 6;
         rainPos[o] = wx;
         rainPos[o + 1] = y;
@@ -736,7 +736,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
 
       const dens = Math.min(1, sim.rainNow / 1.8);
       rainGeo.setDrawRange(0, Math.max(2, Math.floor(RAIN_DROPS * dens) * 2));
-      rainMat.opacity = 0.08 + 0.26 * dens;
+      rainMat.opacity = 0.18 + 0.4 * dens;
     }
 
     // 固定步长：物理永远以 1/60 秒推进，与帧率和倍速无关。

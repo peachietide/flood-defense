@@ -208,7 +208,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     budget: 560,
     damageRate: 10,
     leveeCost: 150,
-    parCost: 450,
+    parCost: 400,
   },
 };
 

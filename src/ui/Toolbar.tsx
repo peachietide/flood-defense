@@ -16,7 +16,9 @@ interface Props {
   onReset: () => void;
 }
 
-const SPEEDS = [1, 2, 4];
+// 只保留 1× 和 2×：4× 下水面变化太快，看不清洪水怎么走，
+// 参数一旦出问题也很难归因，收益不值这个复杂度。
+const SPEEDS = [1, 2];
 
 export default function Toolbar({
   phase,

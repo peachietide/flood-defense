@@ -21,7 +21,7 @@ export const CFG = {
   leveeHeight: 3.2,
   pumpRadius: 4,
   /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
-  pumpFlow: 4,
+  pumpFlow: 8,
   /** 泵房进水超过这个深度就停机 */
   pumpFloodDepth: 1.0,
   /** 布置水泵允许的最大地面高差（米）：超过就是陡坡，泵站放不了。
@@ -249,28 +249,30 @@ export class GameSim {
         const x1 = Math.min(N - 1, p.x + r);
 
         // 先数一下半径内有多少"有水的格子"
-        let area = 0;
+        // 统计半径内的总水量（每格按 1 m² 计）
+        let volume = 0;
         for (let z = z0; z <= z1; z++) {
           for (let x = x0; x <= x1; x++) {
             const dx = x - p.x;
             const dz = z - p.z;
             if (dx * dx + dz * dz > r * r) continue;
-            if (this.depth[z * N + x] > 0.01) area++;
+            volume += this.depth[z * N + x];
           }
         }
-        if (area === 0) continue;
+        if (volume <= 1e-4) continue;
 
-        // 固定流量：总抽水量 Q·dt 摊到所有湿格上。
-        // 浸水面积越大，每格水位降得越慢——这就是"抽不赢"。
-        // 再加一个单格降速上限：真实泵受来水补给限制，不可能把一小片水瞬间抽干。
-        const drop = Math.min(1.0 * dt, (CFG.pumpFlow * dt) / area);
+        // 按"水量比例"抽：总抽水量 Q·dt 固定，水深的地方少得多、浅的地方少得少。
+        // 以前的写法是把 Q·dt 平均摊到湿格上，导致"泵越靠近岸边（湿格越少）越有劲"——
+        // 园区里 49 个格只有 6 个能赢，玩家看不出为什么。
+        const removed = Math.min(CFG.pumpFlow * dt, volume * 0.5);
+        const k = removed / volume;
         for (let z = z0; z <= z1; z++) {
           for (let x = x0; x <= x1; x++) {
             const dx = x - p.x;
             const dz = z - p.z;
             if (dx * dx + dz * dz > r * r) continue;
             const i = z * N + x;
-            this.depth[i] = Math.max(0, this.depth[i] - drop);
+            this.depth[i] *= 1 - k;
           }
         }
       }

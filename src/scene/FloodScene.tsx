@@ -633,14 +633,25 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       }
     }
 
+    // 固定步长：物理永远以 1/60 秒推进，与帧率和倍速无关。
+    // 之前直接把帧间隔当步长，实测同一套方案在不同帧率下峰值能差 28%
+    // （园区 1.171 m @60fps vs 0.838 m @10fps），卡在阈值附近时胜负会翻。
+    const FIXED_DT = 1 / 60;
+    let acc = 0;
+
     function animate() {
       raf = requestAnimationFrame(animate);
-      const dt = Math.min(0.05, clock.getDelta());
+      // 单帧最多补 0.1 秒，避免切回标签页时一口气补几千步
+      const frameDt = Math.min(0.1, clock.getDelta());
+      const speed = Math.max(1, Math.round(speedRef.current));
+      acc += frameDt * speed;
 
-      // 倍速 = 同一帧里多跑几步，而不是把 dt 放大。
-      // 放大 dt 会让元胞模型的单步搬运量饱和，结果和 1× 对不上。
-      const steps = Math.max(1, Math.round(speedRef.current));
-      for (let k = 0; k < steps; k++) sim.step(dt);
+      let steps = 0;
+      while (acc >= FIXED_DT && steps < 16) {
+        sim.step(FIXED_DT);
+        acc -= FIXED_DT;
+        steps++;
+      }
 
       // 切换场景后地形变了，需要重新取景
       if (framedFor !== sim.scenarioId && container.clientWidth > 0) reframe();
@@ -667,9 +678,9 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
       ringMat.opacity = (preparing ? 0.55 : 0.16) + (preparing ? 0.35 : 0.08) * pulse;
       // 虚线沿圆周缓慢流动：动的东西更像"界面"，静止的容易看成地面的纹理
-      dashTex.offset.x = (dashTex.offset.x + dt * 0.06) % 1;
+      dashTex.offset.x = (dashTex.offset.x + frameDt * 0.06) % 1;
 
-      hudTimer += dt;
+      hudTimer += frameDt;
       if (hudTimer > 0.1) {
         hudTimer = 0;
         statsRef.current(sim.stats());

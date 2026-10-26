@@ -652,6 +652,10 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
         acc -= FIXED_DT;
         steps++;
       }
+      // 追不上就丢掉欠的时间，而不是让 acc 无限增长。
+      // 4× 在很慢的机器上（<15fps）会撞到单帧 16 步的上限，
+      // 这里兜住之后表现为"比 4× 慢一点"，但轨迹和 1× 仍然一致。
+      if (acc > FIXED_DT * 8) acc = FIXED_DT * 8;
 
       // 切换场景后地形变了，需要重新取景
       if (framedFor !== sim.scenarioId && container.clientWidth > 0) reframe();

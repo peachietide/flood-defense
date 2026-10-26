@@ -49,8 +49,8 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
             <b>评级 {stats.grade}</b>
             <span>
               {stats.grade === 'A'
-                ? `花了 ${stats.spent}，接近这个厂址的最低可行成本`
-                : `花了 ${stats.spent}，其实 ${stats.parCost} 左右就够——还有更省的做法`}
+                ? `花了 ${stats.spent}，这个厂址守得住的最省做法差不多就是这个量级`
+                : `花了 ${stats.spent}——这还不是最省的做法，还有更便宜就能守住的路子`}
             </span>
           </div>
         ) : null}

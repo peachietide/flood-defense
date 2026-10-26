@@ -8,7 +8,7 @@ import ResultPanel from './ui/ResultPanel';
 import ScenarioBar from './ui/ScenarioBar';
 import SectionChart from './ui/SectionChart';
 import RainPresets from './ui/RainPresets';
-import { GameSim } from './sim/game';
+import { CFG, GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
 import type { ScenarioId } from './sim/scenarios';
 import type { PlaceResult, Stats, Tool } from './sim/game';
@@ -76,7 +76,15 @@ export default function App() {
         showToast(`已花费 ${result.cost}`, false);
       }
       trackFirstAction('place');
-      track('place', { tool, x: cell.x, z: cell.z, ok: result.ok, cost: result.cost ?? 0 });
+      track('place', {
+        tool,
+        x: cell.x,
+        z: cell.z,
+        ok: result.ok,
+        cost: result.cost ?? 0,
+        // 记下被拒原因，下次看数据就知道是"太远"还是"没钱"
+        reason: result.ok ? '' : (result.reason ?? ''),
+      });
       setStats(sim.stats());
     },
     [sim, showToast, tool],
@@ -136,15 +144,26 @@ export default function App() {
   // 已经放东西了，就不再教"点哪里"，而是催他开跑——实测有玩家方案做对了却一直没点开始
   const armed = stats.phase === 'prepare' && (stats.leveeCount > 0 || stats.pumpCount > 0 || stats.hasRing);
 
+  // 当前工具已经买不起了：直接说明，别让玩家一直点、一直被拒
+  const toolCost =
+    tool === 'levee' ? stats.nextLeveeCost : tool === 'ring' ? CFG.ringCost : CFG.pumpCost;
+  const toolBlocked =
+    stats.phase === 'prepare' &&
+    ((tool === 'ring' && stats.hasRing) || stats.budget < toolCost);
+
   const hint =
     stats.phase === 'prepare'
-      ? armed
-        ? '布防好了？点下面的「开始降雨」'
-        : tool === 'levee'
-          ? '点击光圈内，把场地垫高'
-          : tool === 'ring'
-            ? '点击变电站附近，筑一圈围堰'
-            : '点击光圈内低洼处，放一台水泵'
+      ? toolBlocked
+        ? tool === 'ring' && stats.hasRing
+          ? '围堰已经建好了，可以开跑或者重来'
+          : `预算不够了（还差 ${toolCost - stats.budget}）——可以开跑，或者重来`
+        : armed
+          ? '布防好了？点下面的「开始降雨」'
+          : tool === 'levee'
+            ? '点击光圈内，把场地垫高'
+            : tool === 'ring'
+              ? '点击变电站附近，筑一圈围堰'
+              : '点击光圈内低洼处，放一台水泵'
       : '';
 
   return (

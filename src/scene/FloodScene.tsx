@@ -221,8 +221,10 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
     // 地形一起伏就被埋掉，园区场景（场地四周比厂址高）会完全看不见。
     // 这里逐点采样地形高度，做一条贴着地面的高地带。
     const RING_SEG = 128;
-    const RING_INNER = 4.4;
-    const RING_OUTER = 5.9;
+    // 光圈必须画在"可点范围"之内。原来画在 4.4–5.9 格，而允许范围只有 4 格，
+    // 于是玩家照着光圈点、每次都被判"太远了"——一份试玩数据里 63% 的操作被拒。
+    const RING_INNER = 2.9;
+    const RING_OUTER = 4.0;
     /** 一圈上分布多少段虚线 */
     const RING_DASHES = 26;
     const ringPos = new Float32Array((RING_SEG + 1) * 2 * 3);

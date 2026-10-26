@@ -24,6 +24,9 @@ export const CFG = {
   pumpFlow: 4,
   /** 泵房进水超过这个深度就停机 */
   pumpFloodDepth: 1.0,
+  /** 布置水泵允许的最大地面高差（米）：超过就是陡坡，泵站放不了。
+   *  自然地形每格坡降最多约 2 m（峡谷洼地边缘），围堰墙面是 5～6 m，取 3 m 作分界。 */
+  pumpMaxSlope: 3.0,
 
   /** 围堰：绕厂址围一圈挡水的土堰 */
   ringCost: 200,
@@ -434,6 +437,20 @@ export class GameSim {
 
   placePump(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
+
+    // 陡坡上不能布置水泵：一是工程上泵站需要平整场地，
+    // 二是围堰墙面一格就抬升 6 米，放在坡面上的泵会显示成"悬在半空"。
+    const i = cz * N + cx;
+    const h = this.height[i];
+    let maxDiff = 0;
+    if (cx > 0) maxDiff = Math.max(maxDiff, Math.abs(this.height[i - 1] - h));
+    if (cx < N - 1) maxDiff = Math.max(maxDiff, Math.abs(this.height[i + 1] - h));
+    if (cz > 0) maxDiff = Math.max(maxDiff, Math.abs(this.height[i - N] - h));
+    if (cz < N - 1) maxDiff = Math.max(maxDiff, Math.abs(this.height[i + N] - h));
+    if (maxDiff > CFG.pumpMaxSlope) {
+      return { ok: false, reason: '坡面过陡，水泵需要平整场地' };
+    }
+
     if (this.budget < CFG.pumpCost) return { ok: false, reason: '预算不足' };
     this.budget -= CFG.pumpCost;
     this.pumps.push({ x: cx, z: cz, flooded: false });

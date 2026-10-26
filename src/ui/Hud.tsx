@@ -34,6 +34,13 @@ export default function Hud({ stats }: { stats: Stats }) {
         </div>
       </div>
       <div className="stat">
+        <div className="k">厂坪水深</div>
+        <div className={`v ${stats.siteDepthNow >= 0.45 ? 'bad' : stats.siteDepthNow >= 0.25 ? 'warn' : ''}`}>
+          {stats.siteDepthNow.toFixed(2)}
+          <span className="unit">m</span>
+        </div>
+      </div>
+      <div className="stat">
         <div className="k">淹没面积</div>
         <div className={`v ${floodClass(stats.floodedPct)}`}>{Math.round(stats.floodedPct)}%</div>
       </div>

@@ -192,6 +192,29 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+.stat .v .unit {
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.65;
+}
+
+/* 播放倍速 */
+.speedLabel {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #7f91ab;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.toolbar button.speed {
+  min-width: 44px;
+  padding: 9px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
 .stat .v.warn {
   color: #ffb454;
 }

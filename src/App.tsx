@@ -26,10 +26,12 @@ export default function App() {
   const [stats, setStats] = useState<Stats>(() => sim.stats());
   const [scenarioId, setScenarioId] = useState<ScenarioId>('canyon');
   const [tool, setTool] = useState<Tool>('levee');
+  const [speed, setSpeed] = useState(1);
   const [toast, setToast] = useState('');
   const [toastAlert, setToastAlert] = useState(false);
   const toastTimer = useRef<number | null>(null);
   const lastPhase = useRef<Stats['phase']>('prepare');
+  const peakShown = useRef(false);
   const [sessions, setSessions] = useState(() => sessionCount());
 
   const scenario = SCENARIOS[scenarioId];
@@ -50,23 +52,32 @@ export default function App() {
     };
   }, []);
 
-  const handleStats = useCallback((next: Stats) => {
-    setStats(next);
-    // 一局结束时记录一次结果
-    if (next.phase === 'over' && lastPhase.current !== 'over') {
-      trackResult({
-        won: next.won,
-        hp: next.hp,
-        budget: next.budget,
-        elapsed: next.elapsed,
-        floodedPct: next.floodedPct,
-        pumps: next.pumpCount,
-        pumpsFlooded: next.pumpFlooded,
-      });
-      setSessions(sessionCount());
-    }
-    lastPhase.current = next.phase;
-  }, []);
+  const handleStats = useCallback(
+    (next: Stats) => {
+      setStats(next);
+      // 一局结束时记录一次结果
+      if (next.phase === 'over' && lastPhase.current !== 'over') {
+        trackResult({
+          won: next.won,
+          hp: next.hp,
+          budget: next.budget,
+          elapsed: next.elapsed,
+          floodedPct: next.floodedPct,
+          pumps: next.pumpCount,
+          pumpsFlooded: next.pumpFlooded,
+        });
+        setSessions(sessionCount());
+      }
+      // 洪峰过去时给一个节点提示，等待期才有节奏感
+      if (next.peakPassed && !peakShown.current) {
+        peakShown.current = true;
+        showToast('洪峰已过，水位开始回落', false);
+      }
+      if (next.phase === 'prepare') peakShown.current = false;
+      lastPhase.current = next.phase;
+    },
+    [showToast],
+  );
 
   const handlePlace = useCallback(
     (result: PlaceResult, cell: { x: number; z: number }) => {
@@ -100,6 +111,7 @@ export default function App() {
   const handleReset = useCallback(() => {
     track('restart');
     lastPhase.current = 'prepare';
+    setSpeed(1);
     sim.reset();
     setStats(sim.stats());
     setTool('levee');
@@ -111,6 +123,7 @@ export default function App() {
       if (id === sim.scenarioId) return;
       track('scenario', { id });
       lastPhase.current = 'prepare';
+      setSpeed(1);
       sim.loadScenario(id);
       setScenarioId(id);
       setStats(sim.stats());
@@ -159,6 +172,12 @@ export default function App() {
   const pumpNeedsRing = stats.phase === 'prepare' && stats.pumpCount > 0 && !stats.hasRing;
   const canAffordRing = stats.budget >= CFG.ringCost;
 
+  // 运行中：临近进水时给出倒计时，把"干等"变成"盯预警"
+  const eta = stats.etaToDamage;
+  const etaWarn =
+    stats.phase === 'running' && eta >= 0 && eta <= 20 && stats.siteDepthNow < CFG.damageDepth;
+  const etaText = etaWarn ? `预计 ${Math.max(1, Math.ceil(eta))} s 后漫过厂坪` : '';
+
   const hint =
     stats.phase === 'prepare'
       ? ringNeedsPump
@@ -180,11 +199,11 @@ export default function App() {
                 : tool === 'ring'
                   ? '在变电站附近点击，修筑围堰（堤内积水需水泵排出）'
                   : '在光圈内低洼处点击，布置水泵'
-      : '';
+      : etaText;
 
   return (
     <div className="app">
-      <FloodScene sim={sim} tool={tool} onStats={handleStats} onPlace={handlePlace} />
+      <FloodScene sim={sim} tool={tool} speed={speed} onStats={handleStats} onPlace={handlePlace} />
 
       <div className="hud">
         <div className="panel info">
@@ -224,6 +243,8 @@ export default function App() {
           nextLeveeCost={stats.nextLeveeCost}
           hasRing={stats.hasRing}
           nudge={armed}
+          speed={speed}
+          onSpeed={setSpeed}
           onTool={setTool}
           onStart={handleStart}
           onReset={handleReset}
@@ -231,8 +252,8 @@ export default function App() {
 
         <Legend />
         {toast || hint ? (
-          <div className={`hint ${toast && toastAlert ? 'alert' : ''}`}>
-            <span className="hintIcon">{toast && toastAlert ? '⚠' : '👆'}</span>
+          <div className={`hint ${(toast && toastAlert) || etaWarn ? 'alert' : ''}`}>
+            <span className="hintIcon">{toast && toastAlert ? '⚠' : etaWarn ? '⏱' : '👆'}</span>
             <span className="hintText">
               <span className="hintMain">{toast || hint}</span>
               {!toast && stats.phase === 'prepare' ? (

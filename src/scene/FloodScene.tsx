@@ -8,6 +8,8 @@ import type { GameSim, PlaceResult, Stats, Tool } from '../sim/game';
 interface Props {
   sim: GameSim;
   tool: Tool;
+  /** 播放倍速：用"多跑几步"实现，保证物理和 1× 完全一致 */
+  speed: number;
   onStats: (stats: Stats) => void;
   onPlace: (result: PlaceResult, cell: { x: number; z: number }) => void;
 }
@@ -53,13 +55,15 @@ function terrainColorAt(h: number, wet: number, lo: number, hi: number): number[
   return c;
 }
 
-export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
+export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const toolRef = useRef<Tool>(tool);
+  const speedRef = useRef(speed);
   const statsRef = useRef(onStats);
   const placeRef = useRef(onPlace);
 
   toolRef.current = tool;
+  speedRef.current = speed;
   statsRef.current = onStats;
   placeRef.current = onPlace;
 
@@ -633,7 +637,10 @@ export default function FloodScene({ sim, tool, onStats, onPlace }: Props) {
       raf = requestAnimationFrame(animate);
       const dt = Math.min(0.05, clock.getDelta());
 
-      sim.step(dt);
+      // 倍速 = 同一帧里多跑几步，而不是把 dt 放大。
+      // 放大 dt 会让元胞模型的单步搬运量饱和，结果和 1× 对不上。
+      const steps = Math.max(1, Math.round(speedRef.current));
+      for (let k = 0; k < steps; k++) sim.step(dt);
 
       // 切换场景后地形变了，需要重新取景
       if (framedFor !== sim.scenarioId && container.clientWidth > 0) reframe();

@@ -244,7 +244,10 @@ export class GameSim {
       for (const p of this.pumps) {
         // 泵房自己进水就停机——所以水泵必须放在地势较高处
         const pi = p.z * N + p.x;
-        p.flooded = this.depth[pi] > CFG.pumpFloodDepth;
+        // 一旦进水就永久停机，不随水位回落恢复：
+        // 泵房进过水，电气设备就报废了，不会自己好。
+        // 之前每帧重新判断，水退了泵会"复活"，和"已停机"的提示自相矛盾。
+        if (!p.flooded && this.depth[pi] > CFG.pumpFloodDepth) p.flooded = true;
         if (p.flooded) continue;
 
         const r = CFG.pumpRadius;

@@ -70,10 +70,8 @@ export interface Scenario {
    * 这让"哪个措施划算"随场景变化，而不是一套答案打天下。
    */
   leveeCost: number;
-  /** 本场景守住的最低花费（评级基准，50 年一遇及以下） */
-  parCost: number;
-  /** 100 年一遇下的最低花费——极端工况便宜方案不够用，基准要抬高 */
-  parCostExtreme: number;
+  /** 本场景守住所需的最低花费，按 5/20/50/100 年四档分别标定（离线仿真） */
+  parByPreset: [number, number, number, number];
 }
 
 /** 雨型：真实暴雨不是恒定强度，而是有起势、峰值和消退 */
@@ -150,8 +148,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     budget: 600,
     damageRate: 12,
     leveeCost: 220,
-    parCost: 200,
-    parCostExtreme: 420,
+    parByPreset: [200, 200, 200, 420],
   },
 
   plain: {
@@ -181,8 +178,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     budget: 510,
     damageRate: 7,
     leveeCost: 120,
-    parCost: 120,
-    parCostExtreme: 120,
+    parByPreset: [120, 120, 120, 120],
   },
 
   urban: {
@@ -212,8 +208,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
     budget: 560,
     damageRate: 10,
     leveeCost: 150,
-    parCost: 400,
-    parCostExtreme: 450,
+    parByPreset: [150, 400, 400, 450],
   },
 };
 

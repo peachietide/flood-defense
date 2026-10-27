@@ -379,9 +379,19 @@ export class GameSim {
     }
   }
 
-  /** 本局的评级基准：100 年一遇下便宜方案不够用，基准要抬高 */
+  /** 本局的评级基准：按当前雨强落到 5/20/50/100 年四档之一 */
   private parForThisRun(): number {
-    return this.rainScale > 1.0 ? this.scenario.parCostExtreme : this.scenario.parCost;
+    const scales = [0.55, 0.8, 1.0, 1.35];
+    let best = 0;
+    let bestDiff = Infinity;
+    for (let i = 0; i < scales.length; i++) {
+      const d = Math.abs(scales[i] - this.rainScale);
+      if (d < bestDiff) {
+        bestDiff = d;
+        best = i;
+      }
+    }
+    return this.scenario.parByPreset[best];
   }
 
   /** 未来 15% 局时长内的最大雨强倍率（雨型曲线已知，可以"看后面的雨"） */

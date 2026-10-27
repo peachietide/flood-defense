@@ -377,11 +377,13 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
     const dropW = new Float32Array(RAIN_DROPS); // 沿 z（上游 → 下游）的归一化位置
     const dropY = new Float32Array(RAIN_DROPS);
     const dropV = new Float32Array(RAIN_DROPS); // 下落速度
+    const dropR = new Float32Array(RAIN_DROPS); // 抽签值：与降雨掩膜比较，决定这滴看不看得见
     for (let i = 0; i < RAIN_DROPS; i++) {
       dropU[i] = Math.random();
       dropW[i] = Math.random();
       dropY[i] = -18 + Math.random() * 70;
       dropV[i] = 16 + Math.random() * 22;
+      dropR[i] = Math.random();
     }
     const rainGeo = new THREE.BufferGeometry();
     rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
@@ -714,17 +716,34 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       rainMesh.visible = raining;
       if (!raining) return;
 
-      const endRatio = sim.scenario.terrain.catchmentEnd;
       const halfN = N / 2;
       for (let i = 0; i < RAIN_DROPS; i++) {
         let y = dropY[i] - dropV[i] * dtSim;
         if (y < -20) y += 70;
         dropY[i] = y;
 
+        // 铺满整个计算域，但"看不看得见"由降雨掩膜决定：
+        // 上游雨密、厂址附近只有本地降雨（掩膜里保留的那 30%），所以稀但不为零。
+        // 原来把雨限制在上游矩形里，结果变电站那一半完全看不到雨。
         const wx = (dropU[i] - 0.5) * N;
-        const wz = -halfN + dropW[i] * endRatio * N;
-        const len = 2.2 + dropV[i] * 0.08;
+        const wz = -halfN + dropW[i] * N;
+        const gx = Math.max(0, Math.min(N - 1, Math.floor(dropU[i] * N)));
+        const gz = Math.max(0, Math.min(N - 1, Math.floor(dropW[i] * N)));
+        const mask = sim.rainMask[gz * N + gx];
+
         const o = i * 6;
+        if (dropR[i] > mask) {
+          // 这一格不下雨：把线段收成一个点，等于不可见
+          rainPos[o] = wx;
+          rainPos[o + 1] = y;
+          rainPos[o + 2] = wz;
+          rainPos[o + 3] = wx;
+          rainPos[o + 4] = y;
+          rainPos[o + 5] = wz;
+          continue;
+        }
+
+        const len = 2.2 + dropV[i] * 0.08;
         rainPos[o] = wx;
         rainPos[o + 1] = y;
         rainPos[o + 2] = wz;

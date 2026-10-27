@@ -379,6 +379,11 @@ export class GameSim {
     }
   }
 
+  /** 本局的评级基准：100 年一遇下便宜方案不够用，基准要抬高 */
+  private parForThisRun(): number {
+    return this.rainScale > 1.0 ? this.scenario.parCostExtreme : this.scenario.parCost;
+  }
+
   /** 未来 15% 局时长内的最大雨强倍率（雨型曲线已知，可以"看后面的雨"） */
   private rainAheadFactor(): number {
     const n = this.rainCurve.length - 1;
@@ -568,8 +573,8 @@ export class GameSim {
       ),
       leveeCount: Math.round(this.raiseCount[this.facility.cz * N + this.facility.cx]),
       spent: this.scenario.budget - this.budget,
-      grade: this.scenario.budget - this.budget <= this.scenario.parCost * 1.08 ? 'A' : 'B',
-      parCost: this.scenario.parCost,
+      grade: this.scenario.budget - this.budget <= this.parForThisRun() * 1.08 ? 'A' : 'B',
+      parCost: Math.round(this.parForThisRun()),
       siteDepthNow: this.depth[this.facility.cz * N + this.facility.cx],
       peakPassed: this.peakPassed,
       site: this.metricAt(fi),

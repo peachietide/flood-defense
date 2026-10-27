@@ -623,8 +623,19 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* 水泵状态单独一行：停机是要让玩家立刻注意到的信息 */
+.domLine.pumpLine {
+  margin-top: 6px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
 .domLine.pumpOff {
-  color: #ff8f84;
+  color: #ffd2cd;
+  background: rgba(255, 92, 80, 0.16);
+  border: 1px solid rgba(255, 92, 80, 0.42);
+  font-weight: 600;
 }
 
 .domLine.pumpOff b {

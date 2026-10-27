@@ -32,15 +32,16 @@ export default function App() {
   const toastTimer = useRef<number | null>(null);
   const lastPhase = useRef<Stats['phase']>('prepare');
   const peakShown = useRef(false);
+  const shownFloodedPumps = useRef(0);
   const [sessions, setSessions] = useState(() => sessionCount());
 
   const scenario = SCENARIOS[scenarioId];
 
-  const showToast = useCallback((text: string, alert = true) => {
+  const showToast = useCallback((text: string, alert = true, ms = 1400) => {
     setToast(text);
     setToastAlert(alert);
     if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(''), 1400);
+    toastTimer.current = window.setTimeout(() => setToast(''), ms);
   }, []);
 
   useEffect(() => {
@@ -73,7 +74,15 @@ export default function App() {
         peakShown.current = true;
         showToast('洪峰已过，水位开始回落', false);
       }
-      if (next.phase === 'prepare') peakShown.current = false;
+      // 水泵被淹停机：必须在横幅上明说，光靠标记变红玩家容易漏看
+      if (next.phase === 'running' && next.pumpFlooded > shownFloodedPumps.current) {
+        shownFloodedPumps.current = next.pumpFlooded;
+        showToast(`${next.pumpFlooded} 台水泵被淹停机 · 泵房进水超过 1 米，已停止抽水`, true, 3000);
+      }
+      if (next.phase === 'prepare') {
+        peakShown.current = false;
+        shownFloodedPumps.current = 0;
+      }
       lastPhase.current = next.phase;
     },
     [showToast],

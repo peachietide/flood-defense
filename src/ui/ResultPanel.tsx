@@ -48,9 +48,14 @@ export default function ResultPanel({ stats }: { stats: Stats }) {
       </div>
 
       {stats.pumpCount > 0 ? (
-        <div className={`domLine ${stats.pumpFlooded > 0 ? 'pumpOff' : ''}`}>
-          水泵 <b>{stats.pumpCount}</b> 台
-          {stats.pumpFlooded > 0 ? ` · 已停机 ${stats.pumpFlooded} 台` : ''}
+        <div className={`domLine pumpLine ${stats.pumpFlooded > 0 ? 'pumpOff' : ''}`}>
+          {stats.pumpFlooded > 0 ? '⚠ ' : ''}水泵 <b>{stats.pumpCount}</b> 台
+          {stats.pumpFlooded > 0 ? (
+            <>
+              {' '}
+              · 已停机 <b>{stats.pumpFlooded}</b> 台
+            </>
+          ) : null}
         </div>
       ) : null}
 

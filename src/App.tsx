@@ -8,7 +8,7 @@ import ResultPanel from './ui/ResultPanel';
 import ScenarioBar from './ui/ScenarioBar';
 import SectionChart from './ui/SectionChart';
 import RainPresets from './ui/RainPresets';
-import { CFG, GameSim } from './sim/game';
+import { GameSim } from './sim/game';
 import { SCENARIOS } from './sim/scenarios';
 import type { ScenarioId } from './sim/scenarios';
 import type { PlaceResult, Stats, Tool } from './sim/game';
@@ -154,46 +154,29 @@ export default function App() {
     downloadJson();
   }, [showToast]);
 
-  // 已经放东西了，就不再教"点哪里"，而是催他开跑——实测有玩家方案做对了却一直没点开始
-  const armed = stats.phase === 'prepare' && (stats.leveeCount > 0 || stats.pumpCount > 0 || stats.hasRing);
+  // 提示只描述"现在的状态 + 下一步能做什么"，不替玩家预设他会继续用哪个工具，
+  // 也不预言这局会不会输——那样会把玩家没做的选择当成既定事实。
+  const placed = stats.leveeCount > 0 || stats.pumpCount > 0 || stats.hasRing;
 
-  // 当前工具已经买不起了：直接说明，别让玩家一直点、一直被拒
-  const toolCost =
-    tool === 'levee' ? stats.nextLeveeCost : tool === 'ring' ? CFG.ringCost : CFG.pumpCost;
-  const toolBlocked =
-    stats.phase === 'prepare' &&
-    ((tool === 'ring' && stats.hasRing) || stats.budget < toolCost);
+  let hintText = '';
+  if (stats.phase === 'prepare') {
+    if (!placed) {
+      hintText =
+        tool === 'levee'
+          ? '在光圈内点击，抬高场地'
+          : tool === 'ring'
+            ? '在变电站附近点击，修筑围堰'
+            : '在光圈内低洼处点击，布置水泵';
+    } else if (stats.hasRing && stats.pumpCount === 0) {
+      // 围堰挡外水、堤内积水靠泵排——这是机制，不是猜测。
+      // 措辞只陈述机制，不判断"这局会不会输"。
+      hintText = '围堰只拦截外部洪水，堤内积水仍需水泵排出';
+    } else {
+      hintText = '布防完成，可以开始降雨';
+    }
+  }
 
-  // 围堰单独用必输：它只挡外面的洪水，堤内的积水得靠水泵排。
-  // 建完就催"可以开跑了"会把人送进一个注定失败的局。
-  const ringNeedsPump = stats.phase === 'prepare' && stats.hasRing && stats.pumpCount === 0;
-  const canAffordPump = stats.budget >= CFG.pumpCost;
-  // 反过来也一样：没有围堰，水泵只能排出 50 m² 内的水，挡不住外面来的洪水
-  const pumpNeedsRing = stats.phase === 'prepare' && stats.pumpCount > 0 && !stats.hasRing;
-  const canAffordRing = stats.budget >= CFG.ringCost;
-
-  const hint =
-    stats.phase === 'prepare'
-      ? ringNeedsPump
-        ? canAffordPump
-          ? '围堰仅阻挡外部洪水，堤内积水需由水泵排出'
-          : '围堰已建成，但预算不足以配置水泵——本局难以守住，建议重来'
-        : pumpNeedsRing
-          ? canAffordRing
-            ? '水泵仅能排除堤内积水，外部洪水仍需围堰阻挡'
-            : '已布置水泵，但预算不足以修建围堰——本局难以守住'
-          : toolBlocked
-            ? tool === 'ring' && stats.hasRing
-              ? '围堰已建成，可以开始降雨或重来'
-              : `预算不足（还差 ${toolCost - stats.budget}）——可以开始降雨，或重来`
-            : armed
-              ? '布防完成，可以开始降雨'
-              : tool === 'levee'
-                ? '在光圈内点击，抬高场地'
-                : tool === 'ring'
-                  ? '在变电站附近点击，修筑围堰（堤内积水需水泵排出）'
-                  : '在光圈内低洼处点击，布置水泵'
-      : '';
+  const hint = hintText;
 
   return (
     <div className="app">
@@ -238,7 +221,7 @@ export default function App() {
           budget={stats.budget}
           nextLeveeCost={stats.nextLeveeCost}
           hasRing={stats.hasRing}
-          nudge={armed}
+          nudge={placed}
           speed={speed}
           onSpeed={setSpeed}
           onTool={setTool}

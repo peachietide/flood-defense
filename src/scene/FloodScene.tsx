@@ -368,6 +368,59 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       ringGeo.computeBoundingSphere();
     }
 
+    // ---------- 堤内可布泵区域 ----------
+    // 围堰内坡在斜视角下会把堤内地面挡住（峡谷内坡高差 7 米，遮挡距离超过堤内半径），
+    // 玩家看到的是"围堰把里面填满了"，根本找不到空地。
+    // 这里把"能放泵的那一圈"用穿透渲染画出来：depthTest 关掉，
+    // 于是它会画在堤坡之上，不管墙多高都看得见。
+    const PUMP_ZONE_INNER = 2.3;
+    const PUMP_ZONE_OUTER = 4.9;
+    const pumpZonePos = new Float32Array((RING_SEG + 1) * 2 * 3);
+    const pumpZoneIdx: number[] = [];
+    for (let k = 0; k < RING_SEG; k++) {
+      const a = k * 2;
+      const b = k * 2 + 1;
+      const c = (k + 1) * 2;
+      const d = (k + 1) * 2 + 1;
+      pumpZoneIdx.push(a, c, b, b, c, d);
+    }
+    const pumpZoneGeo = new THREE.BufferGeometry();
+    pumpZoneGeo.setAttribute('position', new THREE.BufferAttribute(pumpZonePos, 3));
+    pumpZoneGeo.setIndex(pumpZoneIdx);
+    const pumpZoneMat = new THREE.MeshBasicMaterial({
+      color: 0x46e0ff,
+      transparent: true,
+      opacity: 0.2,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const pumpZone = new THREE.Mesh(pumpZoneGeo, pumpZoneMat);
+    pumpZone.renderOrder = 21;
+    pumpZone.visible = false;
+    scene.add(pumpZone);
+
+    function updatePumpZone() {
+      const fx = sim.facility.cx;
+      const fz = sim.facility.cz;
+      for (let k = 0; k <= RING_SEG; k++) {
+        const ang = (k / RING_SEG) * Math.PI * 2;
+        const ca = Math.cos(ang);
+        const sa = Math.sin(ang);
+        for (let j = 0; j < 2; j++) {
+          const r = j === 0 ? PUMP_ZONE_INNER : PUMP_ZONE_OUTER;
+          const gx = fx + ca * r;
+          const gz = fz + sa * r;
+          const i = (k * 2 + j) * 3;
+          pumpZonePos[i] = gx - N / 2 + 0.5;
+          pumpZonePos[i + 1] = sampleTerrainHeight(gx, gz) + 0.3;
+          pumpZonePos[i + 2] = gz - N / 2 + 0.5;
+        }
+      }
+      pumpZoneGeo.attributes.position.needsUpdate = true;
+      pumpZoneGeo.computeBoundingSphere();
+    }
+
     // ---------- 降雨 ----------
     // 整个游戏讲的是一场暴雨，但原来画面上看不到一滴雨。
     // 雨丝落在上游集水区（跟降雨掩膜一致），把"雨 → 汇流 → 淹厂址"这条因果链显出来。
@@ -806,7 +859,15 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       // 建了围堰之后，光圈和堰顶会叠在一起，直接收掉
       siteRing.visible = !sim.hasRing;
       if (preparing) updateSiteRing();
+
+      // 堤内可布泵区域：选了水泵工具、或者建了围堰还没放泵时显示
+      const showPumpZone =
+        preparing && sim.hasRing && (toolRef.current === 'pump' || sim.pumps.length === 0);
+      pumpZone.visible = showPumpZone;
+      if (showPumpZone) updatePumpZone();
+
       const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
+      pumpZoneMat.opacity = 0.14 + 0.1 * pulse;
       ringMat.opacity = (preparing ? 0.55 : 0.16) + (preparing ? 0.35 : 0.08) * pulse;
       // 虚线沿圆周缓慢流动：动的东西更像"界面"，静止的容易看成地面的纹理
       dashTex.offset.x = (dashTex.offset.x + frameDt * 0.06) % 1;
@@ -855,6 +916,8 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       pumpBeamMatOff.dispose();
       ringGeo.dispose();
       ringMat.dispose();
+      pumpZoneGeo.dispose();
+      pumpZoneMat.dispose();
       dashTex.dispose();
       rainGeo.dispose();
       rainMat.dispose();

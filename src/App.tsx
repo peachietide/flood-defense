@@ -179,7 +179,7 @@ export default function App() {
     } else if (stats.hasRing && stats.pumpCount === 0) {
       // 围堰挡外水、堤内积水靠泵排——这是机制，不是猜测。
       // 措辞只陈述机制，不判断"这局会不会输"。
-      hintText = '围堰只拦截外部洪水，堤内积水仍需水泵排出';
+      hintText = '围堰只拦截外部洪水，堤内积水仍需水泵排出——水泵要放在围堰内侧';
     } else {
       // 问句，不是结论：避免玩家还没布完就被"布防完成"带节奏直接开跑
       hintText = '布防完成了吗？点「开始降雨」';

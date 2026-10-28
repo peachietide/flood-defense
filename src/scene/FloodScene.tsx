@@ -867,7 +867,7 @@ export default function FloodScene({ sim, tool, speed, onStats, onPlace }: Props
       if (showPumpZone) updatePumpZone();
 
       const pulse = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 2.0);
-      pumpZoneMat.opacity = 0.14 + 0.1 * pulse;
+      pumpZoneMat.opacity = 0.24 + 0.14 * pulse;
       ringMat.opacity = (preparing ? 0.55 : 0.16) + (preparing ? 0.35 : 0.08) * pulse;
       // 虚线沿圆周缓慢流动：动的东西更像"界面"，静止的容易看成地面的纹理
       dashTex.offset.x = (dashTex.offset.x + frameDt * 0.06) % 1;

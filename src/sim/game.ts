@@ -500,6 +500,16 @@ export class GameSim {
   placePump(cx: number, cz: number): PlaceResult {
     if (this.phase !== 'prepare') return { ok: false, reason: '降雨已开始' };
 
+    // 不能在变电站本体上布置水泵。
+    // 建筑只是一个画上去的网格、不参与碰撞，而水泵和变电站用的是同一个底面基准，
+    // 两者一重合，泵顶和光柱就从屋顶露出来——看起来像"装在屋顶上"。
+    // 工程上也不成立：泵站要独立场地和检修通道，屋顶承载也不允许。
+    // 只禁中心 ±1 格（3×3）：再往外就明显在建筑旁边了，
+    // 而 2 格处是峡谷/园区"围堰+泵"仅剩的有效位置，禁掉会让这些解法失效。
+    if (Math.abs(cx - this.facility.cx) <= 1 && Math.abs(cz - this.facility.cz) <= 1) {
+      return { ok: false, reason: '不能在变电站本体上布置水泵——请放在旁边的空地' };
+    }
+
     // 陡坡上不能布置水泵：一是工程上泵站需要平整场地，
     // 二是围堰墙面一格就抬升 6 米，放在坡面上的泵会显示成"悬在半空"。
     const i = cz * N + cx;

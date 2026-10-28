@@ -16,17 +16,31 @@ export default function Overlay({ stats, onReset }: { stats: Stats; onReset: () 
 
   // 输了要说清楚"发生了什么"，但不要说"该怎么做"——
   // 给答案会把玩法变成执行，玩家就没有自己推理的空间了。
+  // 注意：每一句都必须按"玩家实际用了什么"来分支。
+  // 之前这里最后是一个兜底分支，写死"加高与水泵均已使用"，
+  // 导致只放了一台水泵的玩家也被这样告知。
   let tip = '';
   if (!won) {
     const d = fmtDepth(site.depth);
+    const hasLevee = stats.leveeCount > 0;
+    const hasPump = stats.pumpCount > 0;
+    const allPumpsDead = hasPump && stats.pumpFlooded === stats.pumpCount;
+
     if (!parts.length) {
       tip = `本局未采取防护措施，洪水漫过厂坪，最大水深 ${d} m。`;
-    } else if (stats.hasRing && stats.pumpCount === 0) {
+    } else if (stats.hasRing && !hasPump) {
       tip = '围堰阻挡了外部洪水，但堤内降雨无法排出——水位自围堰内部上涨。';
-    } else if (stats.pumpCount > 0 && stats.pumpFlooded === stats.pumpCount) {
+    } else if (allPumpsDead) {
       tip = `${stats.pumpFlooded} 台水泵因泵房进水超过 1 米而停机，未产生抽水效果。`;
-    } else if (stats.leveeCount === 1) {
-      tip = `场地仅加高一次，最大水深仍有 ${d} m，水位超过厂坪。`;
+    } else if (stats.hasRing && hasPump && !hasLevee) {
+      tip = `围堰与水泵均已使用，来水仍漫过围堰，最大水深 ${d} m。`;
+    } else if (hasLevee && !hasPump) {
+      tip =
+        stats.leveeCount === 1
+          ? `场地仅加高一次，最大水深仍有 ${d} m，水位超过厂坪。`
+          : `场地加高 ${stats.leveeCount} 次，最大水深仍有 ${d} m，抬升高度不够。`;
+    } else if (hasPump && !hasLevee) {
+      tip = `仅布置水泵、未抬高厂坪，抽水速度跟不上来水，最大水深达 ${d} m。`;
     } else {
       tip = `加高与水泵均已使用，最大水深仍达 ${d} m，防护未覆盖本场洪水。`;
     }

@@ -22,6 +22,8 @@ export const CFG = {
   pumpRadius: 4,
   /** 水泵额定流量，m³/s（固定流量，不随浸水面积变化） */
   pumpFlow: 8,
+  /** 水泵在离厂址这个距离内，抽的是"场地那片水"而不是自己脚下 */
+  pumpServeRadius: 6,
   /** 泵房进水超过这个深度就停机 */
   pumpFloodDepth: 1.0,
   /** 布置水泵允许的最大地面高差（米）：超过就是陡坡，泵站放不了。
@@ -250,34 +252,42 @@ export class GameSim {
         if (!p.flooded && this.depth[pi] > CFG.pumpFloodDepth) p.flooded = true;
         if (p.flooded) continue;
 
-        const r = CFG.pumpRadius;
-        const z0 = Math.max(0, p.z - r);
-        const z1 = Math.min(N - 1, p.z + r);
-        const x0 = Math.max(0, p.x - r);
-        const x1 = Math.min(N - 1, p.x + r);
+        // 泵站服务的是"场地"，不是自己脚下那一格：
+        // 只要布置在场地范围内，抽的就是厂址所在的那片积水。
+        // 这样同一台泵放在场内任意位置效果一致，不会出现"差一格翻盘"。
+        // 泵房是否被淹仍然看它自己所在格——放低洼处照旧会停机。
+        const nearSite =
+          Math.hypot(p.x - this.facility.cx, p.z - this.facility.cz) <= CFG.pumpServeRadius;
+        const cx0 = nearSite ? this.facility.cx : p.x;
+        const cz0 = nearSite ? this.facility.cz : p.z;
 
-        // 先数一下半径内有多少"有水的格子"
+        const r = CFG.pumpRadius;
+        const z0 = Math.max(0, cz0 - r);
+        const z1 = Math.min(N - 1, cz0 + r);
+        const x0 = Math.max(0, cx0 - r);
+        const x1 = Math.min(N - 1, cx0 + r);
+
         // 统计半径内的总水量（每格按 1 m² 计）
         let volume = 0;
         for (let z = z0; z <= z1; z++) {
           for (let x = x0; x <= x1; x++) {
-            const dx = x - p.x;
-            const dz = z - p.z;
+            const dx = x - cx0;
+            const dz = z - cz0;
             if (dx * dx + dz * dz > r * r) continue;
             volume += this.depth[z * N + x];
           }
         }
         if (volume <= 1e-4) continue;
 
-        // 按"水量比例"抽：总抽水量 Q·dt 固定，水深的地方少得多、浅的地方少得少。
-        // 以前的写法是把 Q·dt 平均摊到湿格上，导致"泵越靠近岸边（湿格越少）越有劲"——
-        // 园区里 49 个格只有 6 个能赢，玩家看不出为什么。
+        // 按"水量比例"抽：总抽水量 Q·dt 固定，水深处扣得多、浅处扣得少。
+        // 以前是把 Q·dt 平均摊到湿格上，导致"泵越靠近岸边（湿格越少）越有劲"，
+        // 园区里 49 个格只有 6 个能赢。
         const removed = Math.min(CFG.pumpFlow * dt, volume * 0.5);
         const k = removed / volume;
         for (let z = z0; z <= z1; z++) {
           for (let x = x0; x <= x1; x++) {
-            const dx = x - p.x;
-            const dz = z - p.z;
+            const dx = x - cx0;
+            const dz = z - cz0;
             if (dx * dx + dz * dz > r * r) continue;
             const i = z * N + x;
             this.depth[i] *= 1 - k;

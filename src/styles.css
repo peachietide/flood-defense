@@ -34,6 +34,33 @@ body,
   pointer-events: none;
 }
 
+/* ---------- 窄屏提示 ---------- */
+/* 界面是桌面布局：面板宽度固定、没有做响应式，手机上会互相重叠。
+   与其让打开的人以为页面坏了，不如直接说明。 */
+.mobileNote {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .mobileNote {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(12, 20, 32, 0.88);
+    border: 1px solid rgba(120, 170, 230, 0.35);
+    color: #cfe3ff;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+
 .panel {
   position: absolute;
   pointer-events: auto;

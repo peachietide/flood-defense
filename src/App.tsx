@@ -195,6 +195,8 @@ export default function App() {
       <div className="hud">
         {/* 很淡的暗角：把视线往中间收，画面不至于"平" */}
         <div className="vignette" />
+        {/* 窄屏提示：界面是桌面布局，手机上会重叠，直接说明比让人以为坏了强 */}
+        <div className="mobileNote">屏幕较小，建议横屏或改用电脑查看</div>
         <div className="panel info">
           <b>山洪防线</b>
           <span className="tag">原型演示</span>
